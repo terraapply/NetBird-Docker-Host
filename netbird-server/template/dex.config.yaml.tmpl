@@ -1,0 +1,72 @@
+# Dex — OIDC broker that turns a GitHub organisation into an OIDC provider
+# NetBird can consume.
+#
+# TEMPLATE. Rendered by ./deploy.py to dex/config.yaml. Do not edit the
+# rendered file: it is overwritten on every run. Edit netbird.yaml instead.
+#
+# The output is gitignored and holds secrets, but is written 0644, not 0600:
+# the dex container runs as UID 1001 and cannot read a 0600 file owned by the
+# host user. The dex/ directory is 0700 instead, which protects it on the host
+# just as well -- the container resolves the path in its own mount namespace
+# and never traverses ours.
+#
+# Placeholders use the dollar-brace form and are substituted by deploy.py.
+# Nothing is expanded at container runtime any more: the Dex image entrypoint
+# still pipes this file through gomplate, but with no template actions left in
+# it, gomplate passes it through unchanged. One engine, one place to look when
+# a value comes out wrong.
+
+issuer: https://${DEX_DOMAIN}
+
+storage:
+  type: sqlite3
+  config:
+    file: /var/dex/dex.db
+
+web:
+  # Plain HTTP — Traefik terminates TLS in front.
+  http: 0.0.0.0:5556
+
+telemetry:
+  http: 0.0.0.0:5558
+
+oauth2:
+  # NetBird already asked the user to consent; a second consent screen for the
+  # broker adds a click and no security.
+  skipApprovalScreen: true
+  # Only GitHub. No local password database.
+  passwordConnector: ""
+
+# There are no Dex-local users: GitHub is the only way in.
+enablePasswordDB: false
+
+staticClients:
+  - id: ${OIDC_CLIENT_ID}
+    name: NetBird
+    secret: "${NETBIRD_OIDC_CLIENT_SECRET}"
+    # netbird-server 0.77.0 sends exactly this callback, with no connector ID
+    # appended. Dex matches redirect URIs by exact string, so a trailing
+    # component (or even a trailing slash) fails with "Unregistered
+    # redirect_uri" — verify against the redirect_uri= value in the Dex log
+    # before changing this line.
+    redirectURIs:
+      - https://${NETBIRD_DOMAIN}/oauth2/callback
+
+connectors:
+  - type: github
+    id: github
+    name: GitHub
+    config:
+      clientID: "${GITHUB_CLIENT_ID}"
+      clientSecret: "${GITHUB_CLIENT_SECRET}"
+      redirectURI: https://${DEX_DOMAIN}/callback
+      # This is the access control. Only members of these organisations can
+      # authenticate at all — everyone else is rejected here, before NetBird
+      # ever sees them. Add `teams: [<slug>, ...]` under an org to narrow
+      # further to specific teams.
+      orgs:
+        - name: ${GITHUB_ORG}
+      # Emit group claims as "<org>:<team-slug>" for later JWT group sync.
+      teamNameField: slug
+      # Only load teams from the orgs listed above, not every org the user is in.
+      loadAllGroups: false

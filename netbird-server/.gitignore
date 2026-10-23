@@ -1,0 +1,18 @@
+# Secrets — never commit
+.env
+
+# Everything below is rendered by deploy.py from netbird.yaml and contains
+# secrets. netbird.yaml is the single source of truth and is never committed;
+# netbird.example.yaml is the committed template.
+/netbird.yaml
+/config.yaml
+/dex/config.yaml
+
+# Local overrides
+docker-compose.override.yml
+
+# Runtime artefacts (only present if volumes are bind-mounted)
+acme.json
+letsencrypt/
+data/
+*.db

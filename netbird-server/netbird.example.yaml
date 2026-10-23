@@ -1,0 +1,131 @@
+# netbird.example.yaml — copy to netbird.yaml and fill in.
+#
+#   cp netbird.example.yaml netbird.yaml && chmod 600 netbird.yaml
+#
+# This is the ONLY file you edit. ./deploy.py renders everything else from it:
+#
+#   template/config.yaml.tmpl      -> config.yaml       (netbird-server)
+#   template/dex.config.yaml.tmpl  -> dex/config.yaml   (dex)
+#                                  -> .env              (docker compose)
+#
+# All three outputs, and netbird.yaml itself, contain secrets. They are
+# gitignored and written mode 600. Never commit netbird.yaml.
+#
+# Generate every secret ONCE and keep it. server.store_encryption_key in
+# particular is unrecoverable: lose it and the encrypted user data in Postgres
+# is gone for good.
+
+schema_version: 1
+
+project:
+  # Pins the compose project name, and therefore the volume names. Changing it
+  # later orphans the existing volumes.
+  name: netbird
+
+# Both must be A records pointing at this host, DNS-only. A proxied record
+# breaks the long-lived gRPC streams and carries no UDP for STUN.
+domains:
+  netbird: netbird.example.com
+  dex: dex.netbird.example.com
+
+acme:
+  # Contact address for Let's Encrypt expiry notices.
+  email: you@example.com
+
+github:
+  # Membership of this organisation is the access control: Dex refuses everyone
+  # else before NetBird ever sees them.
+  org: your-github-org
+  # OAuth App created under the ORGANISATION, not a personal account:
+  #   https://github.com/organizations/<org>/settings/applications/new
+  #   Homepage URL:               https://<domains.netbird>
+  #   Authorization callback URL: https://<domains.dex>/callback
+  client_id: Ov23li_replace_me
+  client_secret: replace_me
+
+# Pin exact tags. "latest" makes "what changed?" unanswerable.
+# To upgrade: bump a tag here, then ./deploy.py update
+images:
+  traefik: traefik:v3.6
+  netbird_server: netbirdio/netbird-server:0.77.0
+  dashboard: netbirdio/dashboard:v2.91.1
+  dex: ghcr.io/dexidp/dex:v2.45.1
+  postgres: postgres:17-alpine
+
+postgres:
+  user: netbird
+  #   openssl rand -hex 32
+  password: ""
+  # Three databases, not one: the main store, the activity log and the embedded
+  # Dex IdP each run their own migrations and create overlapping table names.
+  databases: [netbird, netbird_events, netbird_idp]
+
+oidc:
+  # Must match staticClients[].id rendered into dex/config.yaml.
+  client_id: netbird
+  # Shared between NetBird's embedded Dex (the client) and the standalone Dex
+  # broker (the server). Any long random string.
+  #   openssl rand -hex 32
+  client_secret: ""
+  # Defaults to https://<domains.netbird>/oauth2/callback, which is what
+  # netbird-server 0.77.0 sends. Dex matches this byte-for-byte, so override
+  # only if a Dex log tells you the server is sending something else.
+  # redirect_uri: https://netbird.example.com/oauth2/callback
+
+server:
+  # Local email/password accounts, managed under Settings -> Users.
+  #
+  # Keep this true. It is your break-glass access: a broken OAuth app, an
+  # expired GitHub client secret or a GitHub outage cannot lock you out of your
+  # own control plane while a local account exists.
+  #
+  # Setting it false renders NetBird's localAuthDisabled: true, and from then on
+  # GitHub is the ONLY way in -- including for you. Only do that once GitHub SSO
+  # is proven end to end, and expect deploy.py to warn you every run.
+  local_auth: true
+
+  # Shared secret between the embedded relay and its clients.
+  #   openssl rand -base64 32 | tr -d '=' | tr '/+' '_-'
+  relay_auth_secret: ""
+  # AES key for the embedded IdP's session cookies.
+  #   openssl rand -base64 32
+  session_cookie_key: ""
+  # Encrypts emails and names in the database. MUST keep its '=' padding:
+  # Go decodes it with base64.StdEncoding, which rejects unpadded input.
+  # Back this up somewhere other than this host.
+  #   openssl rand -base64 32
+  store_encryption_key: ""
+
+validation:
+  # How the HTTPS checks reach the stack.
+  #   loopback  connect to 127.0.0.1:443 with SNI/Host set to the domain,
+  #             removing DNS, NAT and router hairpinning as confounders
+  #   dns       resolve normally; tests the real external path, but a router
+  #             without NAT loopback fails it even when the public path is fine
+  #   both      loopback decides pass/fail; DNS can only add a warning
+  reach: both
+
+  checks:
+    services: true          # containers running, images match, no OOM kill
+    postgres: true          # pg_isready and every database present
+    tls: true               # a real certificate, not Traefik's self-signed
+    oidc_netbird: true      # embedded IdP discovery document
+    oidc_dex: true          # broker discovery document
+    api_401: true           # /api/users demands a token
+    dex_redirect_uri: true  # Dex accepts the registered redirect_uri
+    dex_client_secret: true # the static client secret matches
+    stun: true              # real RFC 5389 binding request
+
+# Seconds. Tuned for a small VM (1 vCPU / 1.5 GB). --timeout-scale multiplies
+# them all for a one-off slow day without editing this file.
+timeouts:
+  pull: 600
+  services_ready: 180
+  postgres_ready: 90
+  tls_ready: 180
+  http: 20
+  stun: 3
+
+preflight:
+  min_free_disk_mb: 1500
+  min_free_mem_mb: 300
