@@ -106,7 +106,11 @@ class Config:
             return node
 
         version = raw.get("schema_version", 1)
-        if version > SCHEMA_VERSION:
+        # bool is an int subclass, and a quoted "1" would crash the comparison.
+        if not isinstance(version, int) or isinstance(version, bool):
+            problems.append("schema_version must be an integer, not %r"
+                            % (version,))
+        elif version > SCHEMA_VERSION:
             problems.append(
                 "schema_version %s is newer than this script understands (%s)"
                 % (version, SCHEMA_VERSION))
@@ -178,6 +182,7 @@ class Config:
             "GITHUB_CLIENT_ID": self.github_client_id,
             "GITHUB_CLIENT_SECRET": self.github_client_secret,
             "OIDC_CLIENT_ID": self.oidc_client_id,
+            "OIDC_REDIRECT_URI": self.oidc_redirect_uri,
             "NETBIRD_OIDC_CLIENT_SECRET": self.oidc_client_secret,
             # Inverted, and lowercased: netbird's flag is negative, and Go's
             # yaml wants true/false rather than Python's True/False.
@@ -232,7 +237,16 @@ def load_config(path):
         err("%s not found" % path, "expected next to deploy.py")
         raise SystemExit(2)
     with open(path) as fh:
-        raw = yaml.safe_load(fh) or {}
+        try:
+            raw = yaml.safe_load(fh) or {}
+        except yaml.YAMLError as e:
+            err("%s is not valid yaml: %s" % (path, e),
+                "compare against the committed netbird.example.yaml")
+            raise SystemExit(2)
+    if not isinstance(raw, dict):
+        err("%s must be a mapping at the top level" % path,
+            "compare against the committed netbird.example.yaml")
+        raise SystemExit(2)
     return Config(raw, path)
 
 
@@ -430,15 +444,20 @@ def phase_preflight(ctx, resources=True, need_rendered=False):
             err(x)
         raise SystemExit(2)
 
-    # netbird.yaml now holds secrets: it must never be committed.
-    rc, _, _ = run(["git", "ls-files", "--error-unmatch",
-                    os.path.basename(cfg.path)], ctx, timeout=15)
-    if rc == 0:
-        err("%s is tracked by git but now contains secrets"
-            % os.path.basename(cfg.path),
-            "fix: git rm --cached %s" % os.path.basename(cfg.path),
-            "and confirm it is listed in .gitignore")
-        raise SystemExit(2)
+    # netbird.yaml now holds secrets: it must never be committed. A host
+    # without git cannot commit it either, so a missing git only warns.
+    name = os.path.basename(cfg.path)
+    if shutil.which("git") is None:
+        info("warn: git not found, skipping the check that %s is not committed"
+             % name)
+    else:
+        rc, _, _ = run(["git", "ls-files", "--error-unmatch", name],
+                       ctx, timeout=15)
+        if rc == 0:
+            err("%s is tracked by git but now contains secrets" % name,
+                "fix: git rm --cached %s" % name,
+                "and confirm it is listed in .gitignore")
+            raise SystemExit(2)
 
     mode = os.stat(cfg.path).st_mode & 0o777
     if mode != 0o600:
@@ -1090,7 +1109,7 @@ first run complete. three things are not automated:
      type          Generic OIDC
      name          GitHub          (this is the login button label)
      client id     %(cid)s
-     client secret the NETBIRD_OIDC_CLIENT_SECRET value in .env
+     client secret oidc.client_secret in netbird.yaml
      issuer        https://%(dex)s
 
 3. approve the first github user
@@ -1098,8 +1117,9 @@ first run complete. three things are not automated:
    approval. an owner must approve them under settings -> users. only members
    of the %(org)s organisation get that far; everyone else is refused at dex.
 
-back up NETBIRD_STORE_ENCRYPTION_KEY now. it encrypts user data in postgres and
-a restored backup without it is unreadable.""" % {
+back up server.store_encryption_key from netbird.yaml now, somewhere other than
+this host. it encrypts user data in postgres and a restored backup without it
+is unreadable.""" % {
         "nb": cfg.netbird_domain, "dex": cfg.dex_domain,
         "cid": cfg.oidc_client_id, "org": cfg.github_org})
 
