@@ -27,26 +27,40 @@ def test_newer_schema_version_exits_2(raw, capsys):
 def test_main_bad_config_exits_2(raw, tmp_path, capsys):
     del raw["domains"]
     path = write_config(tmp_path / "netbird.yaml", raw)
-    expect_exit(capsys, lambda: deploy.main(["config", "--config", str(path)]),
-                "domains.netbird")
+    expect_exit(
+        capsys,
+        lambda: deploy.main(["config", "--config", str(path)]),
+        "domains.netbird",
+    )
 
 
 def test_dsn_percent_encodes_password(raw):
     raw["postgres"]["password"] = "p@ss/w:rd"
     assert make_cfg(raw).dsn("netbird") == (
-        "postgres://netbird:p%40ss%2Fw%3Ard@postgres:5432/netbird?sslmode=disable")
+        "postgres://netbird:p%40ss%2Fw%3Ard@postgres:5432/netbird?sslmode=disable"
+    )
 
 
 def test_env_file_vars_keys(raw):
     assert set(make_cfg(raw).env_file_vars()) == {
-        "COMPOSE_PROJECT_NAME", "NETBIRD_DOMAIN", "DEX_DOMAIN",
-        "LETSENCRYPT_EMAIL", "TRAEFIK_IMAGE", "NETBIRD_SERVER_IMAGE",
-        "DASHBOARD_IMAGE", "DEX_IMAGE", "POSTGRES_IMAGE", "POSTGRES_PASSWORD",
+        "COMPOSE_PROJECT_NAME",
+        "NETBIRD_DOMAIN",
+        "DEX_DOMAIN",
+        "LETSENCRYPT_EMAIL",
+        "TRAEFIK_IMAGE",
+        "NETBIRD_SERVER_IMAGE",
+        "DASHBOARD_IMAGE",
+        "DEX_IMAGE",
+        "POSTGRES_IMAGE",
+        "POSTGRES_PASSWORD",
     }
 
 
 def test_redact():
-    for key in ("POSTGRES_PASSWORD", "NETBIRD_STORE_DSN",
-                "NETBIRD_STORE_ENCRYPTION_KEY"):
+    for key in (
+        "POSTGRES_PASSWORD",
+        "NETBIRD_STORE_DSN",
+        "NETBIRD_STORE_ENCRYPTION_KEY",
+    ):
         assert deploy._redact(key, "x") == "<redacted>"
     assert deploy._redact("NETBIRD_DOMAIN", "a") == "a"

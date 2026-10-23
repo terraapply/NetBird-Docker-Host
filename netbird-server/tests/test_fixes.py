@@ -13,7 +13,8 @@ def render_dex(server_dir, raw):
 def test_dex_redirect_uri_default(server_dir, raw):
     dex = render_dex(server_dir, raw)
     assert dex["staticClients"][0]["redirectURIs"] == [
-        "https://netbird.example.com/oauth2/callback"]
+        "https://netbird.example.com/oauth2/callback"
+    ]
 
 
 def test_dex_redirect_uri_override(server_dir, raw):

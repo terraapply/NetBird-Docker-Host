@@ -66,6 +66,7 @@ OK, WARN, FAIL, SKIP = "ok", "warn", "fail", "skip"
 
 # --------------------------------------------------------------- output
 
+
 def err(msg, *hints):
     sys.stderr.write("error: %s\n" % msg)
     for h in hints:
@@ -86,6 +87,7 @@ class Result:
 
 
 # --------------------------------------------------------------- config
+
 
 class Config:
     """Typed view of netbird.yaml. Reports every schema problem at once."""
@@ -108,12 +110,12 @@ class Config:
         version = raw.get("schema_version", 1)
         # bool is an int subclass, and a quoted "1" would crash the comparison.
         if not isinstance(version, int) or isinstance(version, bool):
-            problems.append("schema_version must be an integer, not %r"
-                            % (version,))
+            problems.append("schema_version must be an integer, not %r" % (version,))
         elif version > SCHEMA_VERSION:
             problems.append(
                 "schema_version %s is newer than this script understands (%s)"
-                % (version, SCHEMA_VERSION))
+                % (version, SCHEMA_VERSION)
+            )
 
         self.project = need("project.name", "netbird")
         self.netbird_domain = need("domains.netbird")
@@ -139,22 +141,27 @@ class Config:
 
         self.oidc_redirect_uri = (raw.get("oidc") or {}).get("redirect_uri")
         if not self.oidc_redirect_uri and self.netbird_domain:
-            self.oidc_redirect_uri = (
-                "https://%s/oauth2/callback" % self.netbird_domain)
+            self.oidc_redirect_uri = "https://%s/oauth2/callback" % self.netbird_domain
 
         for key in ("traefik", "netbird_server", "dashboard", "dex", "postgres"):
             if key not in self.images:
                 problems.append("images.%s" % key)
 
         if problems:
-            err("%s is missing or invalid: %s" % (path, ", ".join(problems)),
-                "compare against the committed netbird.example.yaml")
+            err(
+                "%s is missing or invalid: %s" % (path, ", ".join(problems)),
+                "compare against the committed netbird.example.yaml",
+            )
             raise SystemExit(2)
 
     def timeout(self, name, scale=1.0):
         defaults = {
-            "pull": 600, "services_ready": 180, "postgres_ready": 90,
-            "tls_ready": 180, "http": 20, "stun": 3,
+            "pull": 600,
+            "services_ready": 180,
+            "postgres_ready": 90,
+            "tls_ready": 180,
+            "http": 20,
+            "stun": 3,
         }
         return int(self.timeouts.get(name, defaults[name]) * scale)
 
@@ -164,8 +171,11 @@ class Config:
         The password is percent-encoded: an unescaped '@' or '/' silently
         reparses the host half of the URL.
         """
-        return ("postgres://%s:%s@postgres:5432/%s?sslmode=disable"
-                % (self.pg_user, quote(self.pg_password, safe=""), database))
+        return "postgres://%s:%s@postgres:5432/%s?sslmode=disable" % (
+            self.pg_user,
+            quote(self.pg_password, safe=""),
+            database,
+        )
 
     def template_vars(self):
         """Explicit map from netbird.yaml to template placeholders.
@@ -240,12 +250,16 @@ def load_config(path):
         try:
             raw = yaml.safe_load(fh) or {}
         except yaml.YAMLError as e:
-            err("%s is not valid yaml: %s" % (path, e),
-                "compare against the committed netbird.example.yaml")
+            err(
+                "%s is not valid yaml: %s" % (path, e),
+                "compare against the committed netbird.example.yaml",
+            )
             raise SystemExit(2) from None
     if not isinstance(raw, dict):
-        err("%s must be a mapping at the top level" % path,
-            "compare against the committed netbird.example.yaml")
+        err(
+            "%s must be a mapping at the top level" % path,
+            "compare against the committed netbird.example.yaml",
+        )
         raise SystemExit(2)
     return Config(raw, path)
 
@@ -274,22 +288,27 @@ def _render_one(src, dst, variables):
         # a loud failure, not a literal ${FOO} shipped into a live config.
         text = string.Template(raw).substitute(variables)
     except KeyError as e:
-        err("%s uses ${%s}, which netbird.yaml does not define"
-            % (src, e.args[0]),
-            "add it to Config.template_vars() or fix the template")
+        err(
+            "%s uses ${%s}, which netbird.yaml does not define" % (src, e.args[0]),
+            "add it to Config.template_vars() or fix the template",
+        )
         raise SystemExit(2) from None
     except ValueError as e:
-        err("%s is not a valid template: %s" % (src, e),
-            "a bare '$' must be written '$$'")
+        err(
+            "%s is not a valid template: %s" % (src, e),
+            "a bare '$' must be written '$$'",
+        )
         raise SystemExit(2) from None
 
     for bad in ("${", "{{"):
         if bad in text:
-            line = next((i + 1 for i, row in enumerate(text.splitlines())
-                         if bad in row), 0)
-            err("%s still contains %s after rendering (line %d)"
-                % (dst, bad, line),
-                "a value substituted in must not itself contain a placeholder")
+            line = next(
+                (i + 1 for i, row in enumerate(text.splitlines()) if bad in row), 0
+            )
+            err(
+                "%s still contains %s after rendering (line %d)" % (dst, bad, line),
+                "a value substituted in must not itself contain a placeholder",
+            )
             raise SystemExit(2)
     try:
         yaml.safe_load(text)
@@ -326,8 +345,9 @@ def phase_render(ctx):
     cfg = ctx.cfg
     variables = cfg.template_vars()
 
-    pending = [(dst, _render_one(src, dst, variables), mode)
-               for src, dst, mode in TEMPLATES]
+    pending = [
+        (dst, _render_one(src, dst, variables), mode) for src, dst, mode in TEMPLATES
+    ]
 
     # Exposed to compose as labels; without them `up -d` sees no change when
     # only file *content* changed and silently leaves the old container running.
@@ -350,14 +370,15 @@ def phase_render(ctx):
         if parent and not os.path.isdir(parent):
             os.makedirs(parent, mode=0o755, exist_ok=True)
         if os.path.isdir(full):
-            err("%s is a directory, not a file" % dst,
+            err(
+                "%s is a directory, not a file" % dst,
                 "docker created it when the file was missing",
-                "fix: docker compose down && rmdir %s" % dst)
+                "fix: docker compose down && rmdir %s" % dst,
+            )
             raise SystemExit(2)
         # Create with the mode, rather than chmod after writing: otherwise a
         # world-readable file holding the store key exists for a moment.
-        tmp = os.path.join(os.path.dirname(full),
-                           ".%s.tmp" % os.path.basename(full))
+        tmp = os.path.join(os.path.dirname(full), ".%s.tmp" % os.path.basename(full))
         fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, mode)
         with os.fdopen(fd, "w") as fh:
             fh.write(text)
@@ -375,6 +396,7 @@ def phase_render(ctx):
 
 
 # --------------------------------------------------------------- process
+
 
 class Ctx:
     def __init__(self, cfg, args):
@@ -396,8 +418,13 @@ def run(argv, ctx, timeout=60, check=False, stream=False):
             p = subprocess.run(argv, cwd=HERE, env=ctx.env, timeout=timeout)
             return p.returncode, "", ""
         p = subprocess.run(
-            argv, cwd=HERE, env=ctx.env, timeout=timeout,
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+            argv,
+            cwd=HERE,
+            env=ctx.env,
+            timeout=timeout,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
         )
     except subprocess.TimeoutExpired:
         if check:
@@ -410,7 +437,7 @@ def run(argv, ctx, timeout=60, check=False, stream=False):
     if check and p.returncode != 0:
         err(
             "%s failed" % " ".join(argv[:3]),
-            *(p.stderr or p.stdout or "").strip().splitlines()[-8:]
+            *(p.stderr or p.stdout or "").strip().splitlines()[-8:],
         )
         raise SystemExit(3)
     return p.returncode, p.stdout, p.stderr
@@ -418,23 +445,31 @@ def run(argv, ctx, timeout=60, check=False, stream=False):
 
 def compose(ctx, *args, **kw):
     base = [
-        "docker", "compose",
-        "--env-file", ".env",
-        "-p", ctx.cfg.project,
-        "-f", "docker-compose.yml",
+        "docker",
+        "compose",
+        "--env-file",
+        ".env",
+        "-p",
+        ctx.cfg.project,
+        "-f",
+        "docker-compose.yml",
     ]
     return run(base + list(args), ctx, **kw)
 
 
 # --------------------------------------------------------------- preflight
 
+
 def phase_preflight(ctx, resources=True, need_rendered=False):
     """Config consistency always; resource headroom only before mutating."""
     cfg = ctx.cfg
     problems = []
 
-    for rel in ("docker-compose.yml", "template/config.yaml.tmpl",
-                "template/dex.config.yaml.tmpl"):
+    for rel in (
+        "docker-compose.yml",
+        "template/config.yaml.tmpl",
+        "template/dex.config.yaml.tmpl",
+    ):
         if not os.path.exists(os.path.join(HERE, rel)):
             problems.append("missing file: %s" % rel)
     if need_rendered and not os.path.exists(os.path.join(HERE, ".env")):
@@ -448,87 +483,111 @@ def phase_preflight(ctx, resources=True, need_rendered=False):
     # without git cannot commit it either, so a missing git only warns.
     name = os.path.basename(cfg.path)
     if shutil.which("git") is None:
-        info("warn: git not found, skipping the check that %s is not committed"
-             % name)
+        info("warn: git not found, skipping the check that %s is not committed" % name)
     else:
-        rc, _, _ = run(["git", "ls-files", "--error-unmatch", name],
-                       ctx, timeout=15)
+        rc, _, _ = run(["git", "ls-files", "--error-unmatch", name], ctx, timeout=15)
         if rc == 0:
-            err("%s is tracked by git but now contains secrets" % name,
+            err(
+                "%s is tracked by git but now contains secrets" % name,
                 "fix: git rm --cached %s" % name,
-                "and confirm it is listed in .gitignore")
+                "and confirm it is listed in .gitignore",
+            )
             raise SystemExit(2)
 
     mode = os.stat(cfg.path).st_mode & 0o777
     if mode != 0o600:
-        info("warn: %s is mode %o, expected 600 (chmod 600 %s)"
-             % (os.path.basename(cfg.path), mode, os.path.basename(cfg.path)))
+        info(
+            "warn: %s is mode %o, expected 600 (chmod 600 %s)"
+            % (os.path.basename(cfg.path), mode, os.path.basename(cfg.path))
+        )
 
     # Report every bad secret at once rather than one per run.
     if not isinstance(cfg.local_auth, bool):
-        err("server.local_auth must be true or false, not %r" % (cfg.local_auth,),
-            "it is a boolean: true keeps local email/password login working")
+        err(
+            "server.local_auth must be true or false, not %r" % (cfg.local_auth,),
+            "it is a boolean: true keeps local email/password login working",
+        )
         raise SystemExit(2)
     if not cfg.local_auth:
         info("warn: server.local_auth is false -- local email/password login is")
         info("      disabled, so github is the only way in. a github outage or an")
         info("      expired client secret will lock out everyone, including you.")
 
-    mistyped = sorted("%s (%s)" % (k, type(v).__name__)
-                      for k, v in cfg.secrets().items()
-                      if v is not None and not isinstance(v, str))
+    mistyped = sorted(
+        "%s (%s)" % (k, type(v).__name__)
+        for k, v in cfg.secrets().items()
+        if v is not None and not isinstance(v, str)
+    )
     if mistyped:
-        err("these must be quoted strings in %s: %s"
+        err(
+            "these must be quoted strings in %s: %s"
             % (os.path.basename(cfg.path), ", ".join(mistyped)),
             "yaml turns an unquoted all-digit or yes/no value into a number",
             "or a boolean, which is not the credential you generated",
-            'fix: wrap the value in double quotes')
+            "fix: wrap the value in double quotes",
+        )
         raise SystemExit(2)
 
-    unsafe = sorted(k for k, v in cfg.secrets().items()
-                    if isinstance(v, str)
-                    and (v != v.strip() or "\n" in v or '"' in v
-                         or "\\" in v or "$" in v))
+    unsafe = sorted(
+        k
+        for k, v in cfg.secrets().items()
+        if isinstance(v, str)
+        and (v != v.strip() or "\n" in v or '"' in v or "\\" in v or "$" in v)
+    )
     if unsafe:
-        err("these contain characters that break the generated files: %s"
+        err(
+            "these contain characters that break the generated files: %s"
             % ", ".join(unsafe),
             "leading/trailing spaces, quotes, backslashes and '$' are unsafe",
-            "in yaml and in .env; regenerate with openssl rand -hex 32")
+            "in yaml and in .env; regenerate with openssl rand -hex 32",
+        )
         raise SystemExit(2)
 
-    blank = sorted(k for k, v in cfg.secrets().items()
-                   if not v or str(v).startswith("replace_me")
-                   or str(v).endswith("_replace_me"))
+    blank = sorted(
+        k
+        for k, v in cfg.secrets().items()
+        if not v or str(v).startswith("replace_me") or str(v).endswith("_replace_me")
+    )
     if blank:
-        err("unset in %s: %s" % (os.path.basename(cfg.path), ", ".join(blank)),
+        err(
+            "unset in %s: %s" % (os.path.basename(cfg.path), ", ".join(blank)),
             "each field in netbird.example.yaml carries its openssl command",
-            "for example: openssl rand -hex 32")
+            "for example: openssl rand -hex 32",
+        )
         raise SystemExit(2)
 
     key = cfg.store_encryption_key
     if not key.endswith("="):
-        err("server.store_encryption_key must keep its base64 '=' padding",
+        err(
+            "server.store_encryption_key must keep its base64 '=' padding",
             "go decodes it with base64.StdEncoding, which rejects unpadded input",
-            "regenerate with: openssl rand -base64 32")
+            "regenerate with: openssl rand -base64 32",
+        )
         raise SystemExit(2)
     try:
         if len(base64.b64decode(key, validate=True)) != 32:
             raise ValueError
     except Exception:
-        err("server.store_encryption_key must decode to exactly 32 bytes",
-            "regenerate with: openssl rand -base64 32")
+        err(
+            "server.store_encryption_key must decode to exactly 32 bytes",
+            "regenerate with: openssl rand -base64 32",
+        )
         raise SystemExit(2) from None
 
     clashing = []
     for k, v in cfg.env_file_vars().items():
         if k in os.environ and os.environ[k] != str(v):
-            clashing.append("%s (shell=%s, netbird.yaml=%s)"
-                            % (k, os.environ[k], v))
+            clashing.append("%s (shell=%s, netbird.yaml=%s)" % (k, os.environ[k], v))
     if clashing:
-        err("exported shell variables would override the generated .env:",
-            *clashing + ["docker compose reads the process environment before",
-                         "--env-file, so the exported value wins",
-                         "fix: unset them"])
+        err(
+            "exported shell variables would override the generated .env:",
+            *clashing
+            + [
+                "docker compose reads the process environment before",
+                "--env-file, so the exported value wins",
+                "fix: unset them",
+            ],
+        )
         raise SystemExit(2)
 
     if not resources:
@@ -537,15 +596,19 @@ def phase_preflight(ctx, resources=True, need_rendered=False):
     free_mb = shutil.disk_usage(HERE).free // (1024 * 1024)
     need_mb = cfg.preflight.get("min_free_disk_mb", 1500)
     if free_mb < need_mb:
-        err("only %d MB free disk, need at least %d MB" % (free_mb, need_mb),
-            "reclaim with: docker image prune -af")
+        err(
+            "only %d MB free disk, need at least %d MB" % (free_mb, need_mb),
+            "reclaim with: docker image prune -af",
+        )
         raise SystemExit(2)
 
     avail = _mem_available_mb()
     min_mem = cfg.preflight.get("min_free_mem_mb", 300)
     if avail is not None and avail < min_mem:
-        info("warn: only %d MB memory available (want %d MB); postgres may be "
-             "OOM-killed" % (avail, min_mem))
+        info(
+            "warn: only %d MB memory available (want %d MB); postgres may be "
+            "OOM-killed" % (avail, min_mem)
+        )
 
 
 def _mem_available_mb():
@@ -561,18 +624,21 @@ def _mem_available_mb():
 
 # --------------------------------------------------------------- state
 
+
 def volume_exists(ctx, name):
     full = "%s_%s" % (ctx.cfg.project, name)
-    rc, out, _ = run(["docker", "volume", "ls", "-q", "-f", "name=^%s$" % full],
-                     ctx, timeout=20)
+    rc, out, _ = run(
+        ["docker", "volume", "ls", "-q", "-f", "name=^%s$" % full], ctx, timeout=20
+    )
     return rc == 0 and out.strip() != ""
 
 
 def probe_setup_required(ctx):
     """None when the server did not answer."""
     try:
-        resp = https_get(ctx, ctx.cfg.netbird_domain, "/api/instance",
-                         timeout=ctx.timeout("http"))
+        resp = https_get(
+            ctx, ctx.cfg.netbird_domain, "/api/instance", timeout=ctx.timeout("http")
+        )
     except Exception:
         return None
     if resp.status != 200:
@@ -584,6 +650,7 @@ def probe_setup_required(ctx):
 
 
 # --------------------------------------------------------------- http
+
 
 class Resp:
     def __init__(self, status, headers, body):
@@ -599,8 +666,7 @@ def _request(host, connect_host, method, path, timeout, headers=None, body=None)
     # certificate properly and separately.
     ctxs.check_hostname = False
     ctxs.verify_mode = ssl.CERT_NONE
-    conn = http.client.HTTPSConnection(
-        connect_host, 443, timeout=timeout, context=ctxs)
+    conn = http.client.HTTPSConnection(connect_host, 443, timeout=timeout, context=ctxs)
     try:
         h = {"Host": host}
         if headers:
@@ -613,8 +679,7 @@ def _request(host, connect_host, method, path, timeout, headers=None, body=None)
         conn.close()
 
 
-def https_get(ctx, host, path, timeout=None, method="GET",
-              headers=None, body=None):
+def https_get(ctx, host, path, timeout=None, method="GET", headers=None, body=None):
     timeout = timeout or ctx.timeout("http")
     connect = "127.0.0.1" if ctx.cfg.reach in ("loopback", "both") else host
     return _request(host, connect, method, path, timeout, headers, body)
@@ -630,6 +695,7 @@ def peer_cert(host, connect_host, timeout):
 
 
 # --------------------------------------------------------------- stun
+
 
 def stun_binding(host, port, timeout):
     """RFC 5389 binding request. Returns the reflexive address, or None.
@@ -652,7 +718,7 @@ def stun_binding(host, port, timeout):
                 mtype, mlen, cookie = struct.unpack("!HHI", data[:8])
                 if data[8:20] != txid or mtype != 0x0101:
                     continue  # not our response; keep listening
-                return _parse_xor_mapped(data[20:20 + mlen]) or "no address"
+                return _parse_xor_mapped(data[20 : 20 + mlen]) or "no address"
     except (socket.timeout, OSError):
         return None
     return None
@@ -661,23 +727,32 @@ def stun_binding(host, port, timeout):
 def _parse_xor_mapped(attrs):
     i = 0
     while i + 4 <= len(attrs):
-        atype, alen = struct.unpack("!HH", attrs[i:i + 4])
-        val = attrs[i + 4:i + 4 + alen]
+        atype, alen = struct.unpack("!HH", attrs[i : i + 4])
+        val = attrs[i + 4 : i + 4 + alen]
         if atype in (0x0020, 0x8020) and len(val) >= 8 and val[1] == 0x01:
             port = struct.unpack("!H", val[2:4])[0] ^ 0x2112
             ip = struct.unpack("!I", val[4:8])[0] ^ 0x2112A442
             return "%d.%d.%d.%d:%d" % (
-                (ip >> 24) & 0xFF, (ip >> 16) & 0xFF,
-                (ip >> 8) & 0xFF, ip & 0xFF, port)
+                (ip >> 24) & 0xFF,
+                (ip >> 16) & 0xFF,
+                (ip >> 8) & 0xFF,
+                ip & 0xFF,
+                port,
+            )
         if atype == 0x0001 and len(val) >= 8:
             return "%d.%d.%d.%d:%d" % (
-                val[4], val[5], val[6], val[7],
-                struct.unpack("!H", val[2:4])[0])
+                val[4],
+                val[5],
+                val[6],
+                val[7],
+                struct.unpack("!H", val[2:4])[0],
+            )
         i += 4 + alen + ((4 - alen % 4) % 4)
     return None
 
 
 # --------------------------------------------------------------- checks
+
 
 def check_services(ctx):
     cfg = ctx.cfg
@@ -718,30 +793,49 @@ def check_services(ctx):
             name = r.get("Name")
             if name:
                 rc2, insp, _ = run(
-                    ["docker", "inspect", name, "--format",
-                     "{{.RestartCount}} {{.State.OOMKilled}} {{.State.Restarting}}"],
-                    ctx, timeout=20)
+                    [
+                        "docker",
+                        "inspect",
+                        name,
+                        "--format",
+                        "{{.RestartCount}} {{.State.OOMKilled}} {{.State.Restarting}}",
+                    ],
+                    ctx,
+                    timeout=20,
+                )
                 if rc2 == 0 and insp.strip():
                     parts = insp.split()
                     if parts[1] == "true":
-                        return Result("services", FAIL,
-                                      "%s was OOM-killed" % svc,
-                                      ["this vm has little free memory and now runs postgres",
-                                       "fix: add swap, or lower shared_buffers on the postgres service"])
+                        return Result(
+                            "services",
+                            FAIL,
+                            "%s was OOM-killed" % svc,
+                            [
+                                "this vm has little free memory and now runs postgres",
+                                "fix: add swap, or lower shared_buffers on the "
+                                "postgres service",
+                            ],
+                        )
                     count = int(parts[0])
                     before = restarts_seen.setdefault(svc, count)
                     if parts[2] == "true":
                         why = "%s is in restart backoff" % svc
                     elif count > before:
-                        why = ("%s restarted %d time(s) while waiting"
-                               % (svc, count - before))
+                        why = "%s restarted %d time(s) while waiting" % (
+                            svc,
+                            count - before,
+                        )
                     else:
                         why = ""
                     if why:
                         logs = compose(ctx, "logs", "--tail=15", svc, timeout=30)[1]
-                        return Result("services", FAIL, why,
-                                      logs.strip().splitlines()[-8:] or
-                                      ["docker compose logs --tail=100 %s" % svc])
+                        return Result(
+                            "services",
+                            FAIL,
+                            why,
+                            logs.strip().splitlines()[-8:]
+                            or ["docker compose logs --tail=100 %s" % svc],
+                        )
 
         if not pending:
             for svc, image in want.items():
@@ -750,44 +844,80 @@ def check_services(ctx):
                 if got and got != image:
                     bad.append("%s runs %s, expected %s" % (svc, got, image))
             if bad:
-                return Result("services", FAIL, bad[0],
-                              ["the container was not recreated after the tag changed",
-                               "fix: ./deploy.py update"])
-            return Result("services", OK, "%d/%d running, images match"
-                          % (len(want), len(want)))
+                return Result(
+                    "services",
+                    FAIL,
+                    bad[0],
+                    [
+                        "the container was not recreated after the tag changed",
+                        "fix: ./deploy.py update",
+                    ],
+                )
+            return Result(
+                "services", OK, "%d/%d running, images match" % (len(want), len(want))
+            )
         last = "; ".join(pending)
         time.sleep(3)
 
-    return Result("services", FAIL, "not ready in time: %s" % last,
-                  ["inspect with: docker compose logs --tail=100"])
+    return Result(
+        "services",
+        FAIL,
+        "not ready in time: %s" % last,
+        ["inspect with: docker compose logs --tail=100"],
+    )
 
 
 def check_postgres(ctx):
     cfg = ctx.cfg
     deadline = time.time() + ctx.timeout("postgres_ready")
     while time.time() < deadline:
-        rc, _, _ = compose(ctx, "exec", "-T", "postgres",
-                           "pg_isready", "-U", cfg.pg_user, timeout=30)
+        rc, _, _ = compose(
+            ctx, "exec", "-T", "postgres", "pg_isready", "-U", cfg.pg_user, timeout=30
+        )
         if rc == 0:
             break
         time.sleep(3)
     else:
-        return Result("postgres", FAIL, "pg_isready never succeeded",
-                      ["docker compose logs --tail=50 postgres"])
+        return Result(
+            "postgres",
+            FAIL,
+            "pg_isready never succeeded",
+            ["docker compose logs --tail=50 postgres"],
+        )
 
-    rc, out, _ = compose(ctx, "exec", "-T", "postgres", "psql", "-U",
-                         cfg.pg_user, "-d", "postgres", "-Atc",
-                         "select datname from pg_database", timeout=30)
+    rc, out, _ = compose(
+        ctx,
+        "exec",
+        "-T",
+        "postgres",
+        "psql",
+        "-U",
+        cfg.pg_user,
+        "-d",
+        "postgres",
+        "-Atc",
+        "select datname from pg_database",
+        timeout=30,
+    )
     have = set((out or "").split())
     missing = [d for d in cfg.pg_databases if d not in have]
     if missing:
-        return Result("postgres", FAIL,
-                      "database(s) missing: %s" % ", ".join(missing),
-                      ["a missing netbird_events means the audit log is silently not written",
-                       "fix: docker compose exec -T postgres createdb -U %s %s"
-                       % (cfg.pg_user, missing[0])])
-    return Result("postgres", OK, "ready, %d/%d databases present"
-                  % (len(cfg.pg_databases), len(cfg.pg_databases)))
+        return Result(
+            "postgres",
+            FAIL,
+            "database(s) missing: %s" % ", ".join(missing),
+            [
+                "a missing netbird_events means the audit log is silently not written",
+                "fix: docker compose exec -T postgres createdb -U %s %s"
+                % (cfg.pg_user, missing[0]),
+            ],
+        )
+    return Result(
+        "postgres",
+        OK,
+        "ready, %d/%d databases present"
+        % (len(cfg.pg_databases), len(cfg.pg_databases)),
+    )
 
 
 def _tls_once(host, connect, timeout):
@@ -824,10 +954,16 @@ def check_tls(ctx):
             return Result("tls", OK, "both hosts, issued certificates")
         time.sleep(5)
 
-    return Result("tls", FAIL, last or "no certificate",
-                  ["acme has not completed; usual causes are a proxied dns record",
-                   "or a blocked port 80/443",
-                   "check with: docker compose logs traefik | grep -i acme"])
+    return Result(
+        "tls",
+        FAIL,
+        last or "no certificate",
+        [
+            "acme has not completed; usual causes are a proxied dns record",
+            "or a blocked port 80/443",
+            "check with: docker compose logs traefik | grep -i acme",
+        ],
+    )
 
 
 def _poll(ctx, fn, budget_name="tls_ready", every=5):
@@ -849,9 +985,13 @@ def _poll(ctx, fn, budget_name="tls_ready", every=5):
 
 def _discovery(ctx, host, expect_issuer, check_id):
     try:
-        r = https_get(ctx, host, "/.well-known/openid-configuration"
-                      if check_id == "oidc_dex"
-                      else "/oauth2/.well-known/openid-configuration")
+        r = https_get(
+            ctx,
+            host,
+            "/.well-known/openid-configuration"
+            if check_id == "oidc_dex"
+            else "/oauth2/.well-known/openid-configuration",
+        )
     except Exception as e:
         return Result(check_id, FAIL, "%s unreachable: %s" % (host, e))
     if r.status != 200:
@@ -862,26 +1002,41 @@ def _discovery(ctx, host, expect_issuer, check_id):
         return Result(check_id, FAIL, "discovery is not json")
     got = doc.get("issuer", "")
     if "$" in got or "{{" in got:
-        return Result(check_id, FAIL,
-                      "issuer contains an unexpanded template: %s" % got,
-                      ["the file was not rendered from its template",
-                       "fix: ./deploy.py  (never edit the generated file)"])
+        return Result(
+            check_id,
+            FAIL,
+            "issuer contains an unexpanded template: %s" % got,
+            [
+                "the file was not rendered from its template",
+                "fix: ./deploy.py  (never edit the generated file)",
+            ],
+        )
     if got != expect_issuer:
-        return Result(check_id, FAIL,
-                      "issuer is %s, expected %s" % (got, expect_issuer))
+        return Result(
+            check_id, FAIL, "issuer is %s, expected %s" % (got, expect_issuer)
+        )
     return Result(check_id, OK, "issuer %s" % got)
 
 
 def check_oidc_netbird(ctx):
-    return _poll(ctx, lambda: _discovery(
-        ctx, ctx.cfg.netbird_domain,
-        "https://%s/oauth2" % ctx.cfg.netbird_domain, "oidc_netbird"))
+    return _poll(
+        ctx,
+        lambda: _discovery(
+            ctx,
+            ctx.cfg.netbird_domain,
+            "https://%s/oauth2" % ctx.cfg.netbird_domain,
+            "oidc_netbird",
+        ),
+    )
 
 
 def check_oidc_dex(ctx):
-    return _poll(ctx, lambda: _discovery(
-        ctx, ctx.cfg.dex_domain,
-        "https://%s" % ctx.cfg.dex_domain, "oidc_dex"))
+    return _poll(
+        ctx,
+        lambda: _discovery(
+            ctx, ctx.cfg.dex_domain, "https://%s" % ctx.cfg.dex_domain, "oidc_dex"
+        ),
+    )
 
 
 def _api_401_once(ctx):
@@ -892,14 +1047,23 @@ def _api_401_once(ctx):
     if r.status == 401:
         return Result("api_401", OK, "/api/users -> 401")
     if r.status == 200:
-        return Result("api_401", FAIL, "/api/users returned 200, expected 401",
-                      ["the api is not requiring a token -- do not expose this host"])
+        return Result(
+            "api_401",
+            FAIL,
+            "/api/users returned 200, expected 401",
+            ["the api is not requiring a token -- do not expose this host"],
+        )
     if r.status in (404, 502, 503):
-        return Result("api_401", FAIL,
-                      "/api/users returned %d, expected 401" % r.status,
-                      ["traefik router priority collision: the dashboard catch-all is",
-                       "matching /api. dashboard must stay priority=1 and the",
-                       "netbird-server routers priority=100 in docker-compose.yml"])
+        return Result(
+            "api_401",
+            FAIL,
+            "/api/users returned %d, expected 401" % r.status,
+            [
+                "traefik router priority collision: the dashboard catch-all is",
+                "matching /api. dashboard must stay priority=1 and the",
+                "netbird-server routers priority=100 in docker-compose.yml",
+            ],
+        )
     return Result("api_401", FAIL, "/api/users returned %d" % r.status)
 
 
@@ -910,14 +1074,17 @@ def check_api_401(ctx):
 def check_dex_redirect_uri(ctx):
     cfg = ctx.cfg
     from urllib.parse import urlencode
-    q = urlencode({
-        "client_id": cfg.oidc_client_id,
-        "redirect_uri": cfg.oidc_redirect_uri,
-        "response_type": "code",
-        "scope": "openid profile email groups",
-        "state": "deploycheck",
-        "nonce": "deploycheck",
-    })
+
+    q = urlencode(
+        {
+            "client_id": cfg.oidc_client_id,
+            "redirect_uri": cfg.oidc_redirect_uri,
+            "response_type": "code",
+            "scope": "openid profile email groups",
+            "state": "deploycheck",
+            "nonce": "deploycheck",
+        }
+    )
     # Dex validates the redirect_uri at /auth/<connector>, not at /auth: the
     # first hop returns 302 even for a completely unregistered URI. Follow
     # redirects that stay on the Dex host, then judge the final status.
@@ -932,10 +1099,12 @@ def check_dex_redirect_uri(ctx):
                 break
             if loc.startswith("http"):
                 from urllib.parse import urlparse
+
                 u = urlparse(loc)
                 if u.netloc != cfg.dex_domain:
-                    return Result("dex_redirect_uri", OK,
-                                  "accepted, handed off to %s" % u.netloc)
+                    return Result(
+                        "dex_redirect_uri", OK, "accepted, handed off to %s" % u.netloc
+                    )
                 path = u.path + (("?" + u.query) if u.query else "")
             else:
                 path = loc
@@ -946,13 +1115,18 @@ def check_dex_redirect_uri(ctx):
         return Result("dex_redirect_uri", OK, "accepted (connector page)")
     if r.status in (302, 303):
         return Result("dex_redirect_uri", OK, "accepted")
-    return Result("dex_redirect_uri", FAIL,
-                  "dex rejected the redirect_uri (%d)" % r.status,
-                  ["sent: %s" % cfg.oidc_redirect_uri,
-                   "dex matches redirect uris by exact string; a trailing slash",
-                   "or extra path segment is a mismatch",
-                   "fix: set oidc.redirect_uri in netbird.yaml, then ./deploy.py",
-                   "dex/config.yaml is generated -- editing it is overwritten"])
+    return Result(
+        "dex_redirect_uri",
+        FAIL,
+        "dex rejected the redirect_uri (%d)" % r.status,
+        [
+            "sent: %s" % cfg.oidc_redirect_uri,
+            "dex matches redirect uris by exact string; a trailing slash",
+            "or extra path segment is a mismatch",
+            "fix: set oidc.redirect_uri in netbird.yaml, then ./deploy.py",
+            "dex/config.yaml is generated -- editing it is overwritten",
+        ],
+    )
 
 
 def check_dex_client_secret(ctx):
@@ -966,26 +1140,41 @@ def check_dex_client_secret(ctx):
     cfg = ctx.cfg
     secret = cfg.oidc_client_secret
     from urllib.parse import urlencode
-    body = urlencode({
-        "grant_type": "authorization_code",
-        "code": "deploy-check-not-a-real-code",
-        "redirect_uri": cfg.oidc_redirect_uri,
-    })
-    basic = base64.b64encode(
-        ("%s:%s" % (cfg.oidc_client_id, secret)).encode()).decode()
+
+    body = urlencode(
+        {
+            "grant_type": "authorization_code",
+            "code": "deploy-check-not-a-real-code",
+            "redirect_uri": cfg.oidc_redirect_uri,
+        }
+    )
+    basic = base64.b64encode(("%s:%s" % (cfg.oidc_client_id, secret)).encode()).decode()
     try:
-        r = https_get(ctx, cfg.dex_domain, "/token", method="POST", body=body,
-                      headers={"Authorization": "Basic " + basic,
-                               "Content-Type": "application/x-www-form-urlencoded",
-                               "Content-Length": str(len(body))})
+        r = https_get(
+            ctx,
+            cfg.dex_domain,
+            "/token",
+            method="POST",
+            body=body,
+            headers={
+                "Authorization": "Basic " + basic,
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Content-Length": str(len(body)),
+            },
+        )
     except Exception as e:
         return Result("dex_client_secret", FAIL, "unreachable: %s" % e)
     if r.status == 401:
-        return Result("dex_client_secret", FAIL,
-                      "dex rejected the client secret",
-                      ["dex and the dashboard's identity-provider entry hold",
-                       "different secrets. after changing oidc.client_secret you",
-                       "must also update settings -> identity providers"])
+        return Result(
+            "dex_client_secret",
+            FAIL,
+            "dex rejected the client secret",
+            [
+                "dex and the dashboard's identity-provider entry hold",
+                "different secrets. after changing oidc.client_secret you",
+                "must also update settings -> identity providers",
+            ],
+        )
     return Result("dex_client_secret", OK, "accepted (invalid_grant)")
 
 
@@ -1005,17 +1194,26 @@ def check_stun(ctx):
     for _ in range(2):
         got = stun_binding("127.0.0.1", port, ctx.timeout("stun"))
         if got:
-            return Result("stun", WARN,
-                          "local ok; no response on %s:%d"
-                          % (cfg.netbird_domain, port),
-                          ["usually the router not supporting nat hairpinning,",
-                           "which does not affect external clients",
-                           "confirm from a host outside the lan"])
-    return Result("stun", FAIL,
-                  "no binding response on 127.0.0.1:%d" % port,
-                  ["netbird-server is not serving stun",
-                   "check server.stunPorts in config.yaml and the 3478:3478/udp",
-                   "publish in docker-compose.yml"])
+            return Result(
+                "stun",
+                WARN,
+                "local ok; no response on %s:%d" % (cfg.netbird_domain, port),
+                [
+                    "usually the router not supporting nat hairpinning,",
+                    "which does not affect external clients",
+                    "confirm from a host outside the lan",
+                ],
+            )
+    return Result(
+        "stun",
+        FAIL,
+        "no binding response on 127.0.0.1:%d" % port,
+        [
+            "netbird-server is not serving stun",
+            "check server.stunPorts in config.yaml and the 3478:3478/udp",
+            "publish in docker-compose.yml",
+        ],
+    )
 
 
 CHECKS = (
@@ -1060,6 +1258,7 @@ def run_checks(ctx):
 
 # --------------------------------------------------------------- phases
 
+
 def phase_pull(ctx):
     # Sequential on purpose: compose's parallel pull thrashes a single core and
     # a single spindle, and a failure should name one image.
@@ -1078,6 +1277,7 @@ def phase_up(ctx):
 
 # --------------------------------------------------------------- report
 
+
 def print_report(cfg, results, mode):
     info("")
     info("%s: %s" % (cfg.netbird_domain, mode))
@@ -1090,12 +1290,15 @@ def print_report(cfg, results, mode):
             for h in r.hints:
                 info("         %s" % h)
     info("")
-    info("%d checks: %d ok, %d warning, %d failed, %d skipped"
-         % (len(results), counts[OK], counts[WARN], counts[FAIL], counts[SKIP]))
+    info(
+        "%d checks: %d ok, %d warning, %d failed, %d skipped"
+        % (len(results), counts[OK], counts[WARN], counts[FAIL], counts[SKIP])
+    )
 
 
 def print_onboarding(cfg):
-    info("""
+    info(
+        """
 first run complete. three things are not automated:
 
 1. create the break-glass admin
@@ -1119,12 +1322,18 @@ first run complete. three things are not automated:
 
 back up server.store_encryption_key from netbird.yaml now, somewhere other than
 this host. it encrypts user data in postgres and a restored backup without it
-is unreadable.""" % {
-        "nb": cfg.netbird_domain, "dex": cfg.dex_domain,
-        "cid": cfg.oidc_client_id, "org": cfg.github_org})
+is unreadable."""
+        % {
+            "nb": cfg.netbird_domain,
+            "dex": cfg.dex_domain,
+            "cid": cfg.oidc_client_id,
+            "org": cfg.github_org,
+        }
+    )
 
 
 # --------------------------------------------------------------- commands
+
 
 def cmd_config(ctx):
     cfg = ctx.cfg
@@ -1151,8 +1360,10 @@ def _redact(key, value):
 
 def cmd_compose(ctx, extra):
     if not extra:
-        err("usage: ./deploy.py compose -- <docker compose args>",
-            "example: ./deploy.py compose -- logs --tail=50 dex")
+        err(
+            "usage: ./deploy.py compose -- <docker compose args>",
+            "example: ./deploy.py compose -- logs --tail=50 dex",
+        )
         return 1
     rc, _, _ = compose(ctx, *extra, timeout=900, stream=True)
     return rc
@@ -1166,8 +1377,7 @@ def cmd_status(ctx):
     if sr is None:
         info("setup: server did not answer /api/instance")
     elif sr:
-        info("setup: no owner account yet (visit https://%s)"
-             % ctx.cfg.netbird_domain)
+        info("setup: no owner account yet (visit https://%s)" % ctx.cfg.netbird_domain)
     else:
         info("setup: complete")
     return 0
@@ -1219,19 +1429,29 @@ def cmd_up(ctx, update=False):
 
 def main(argv):
     p = argparse.ArgumentParser(
-        prog="deploy.py", description="provision and validate the netbird stack")
-    p.add_argument("command", nargs="?", default="provision",
-                   choices=("provision", "update", "validate", "status",
-                            "config", "compose"))
+        prog="deploy.py", description="provision and validate the netbird stack"
+    )
+    p.add_argument(
+        "command",
+        nargs="?",
+        default="provision",
+        choices=("provision", "update", "validate", "status", "config", "compose"),
+    )
     p.add_argument("extra", nargs="*", help="args for `compose` passthrough")
-    p.add_argument("--config", default=os.path.join(HERE, "netbird.yaml"),
-                   help="path to netbird.yaml")
-    p.add_argument("--timeout-scale", type=float, default=1.0,
-                   help="multiply every timeout, for a slow day")
+    p.add_argument(
+        "--config",
+        default=os.path.join(HERE, "netbird.yaml"),
+        help="path to netbird.yaml",
+    )
+    p.add_argument(
+        "--timeout-scale",
+        type=float,
+        default=1.0,
+        help="multiply every timeout, for a slow day",
+    )
     p.add_argument("--only", help="comma-separated checks to run")
     p.add_argument("--skip", help="comma-separated checks to skip")
-    p.add_argument("--strict", action="store_true",
-                   help="treat warnings as failures")
+    p.add_argument("--strict", action="store_true", help="treat warnings as failures")
     p.add_argument("--show-onboarding", action="store_true")
     args = p.parse_args(argv)
 
