@@ -20,8 +20,9 @@ def example_images():
 
 
 def test_renovate_regex_finds_all_images():
-    managers = [m for m in load_renovate()["customManagers"]
-                if m["customType"] == "regex"]
+    managers = [
+        m for m in load_renovate()["customManagers"] if m["customType"] == "regex"
+    ]
     assert len(managers) == 1
     text = EXAMPLE.read_text()
     found = set()
