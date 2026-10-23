@@ -30,6 +30,8 @@ NetBird is a WireGuard-based overlay network. This repository holds everything n
 
 The server VM hosts the NetBird control plane. Agent VMs register with the server using a setup key and then talk to each other directly over WireGuard where possible.
 
+The server VM runs five containers: `traefik` (TLS and routing), `netbird-server` (management, signal, relay and STUN), `dashboard`, `dex` and `postgres`. Login is limited to members of one GitHub organisation through Dex, and a local break-glass login stays on by default so a GitHub problem cannot lock you out.
+
 ## Install methods
 
 | Component | Method | Where |
@@ -40,10 +42,13 @@ The server VM hosts the NetBird control plane. Agent VMs register with the serve
 
 ## Prerequisites
 
-- TODO: supported VM operating systems
-- TODO: domain name and DNS records for the server
-- TODO: ports that must be open on the server VM
-- TODO: minimum Docker and Docker Compose versions
+Server VM:
+
+- Ubuntu 22.04/24.04 or Debian 12. 2 vCPU / 4 GB RAM recommended; 1 vCPU / 1.5 GB works with some swap. See [VM](netbird-server/README.md#vm).
+- Docker Engine with the Compose v2 plugin, and `python3-yaml`.
+- Two DNS-only A records pointing at the VM, for example `netbird.<domain>` and `dex.netbird.<domain>`. See [DNS](netbird-server/README.md#dns).
+- Inbound `80/tcp`, `443/tcp` and `3478/udp`. See [Inbound ports](netbird-server/README.md#inbound-ports).
+- A GitHub organisation where you can create an OAuth App. See [GitHub OAuth App](netbird-server/README.md#github-oauth-app).
 
 ## Quick start
 
