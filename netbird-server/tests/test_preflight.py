@@ -1,6 +1,5 @@
-import pytest
-
 import deploy
+import pytest
 from conftest import expect_exit, make_cfg, make_ctx, write_config
 
 pytestmark = pytest.mark.usefixtures("server_dir", "git_untracked")

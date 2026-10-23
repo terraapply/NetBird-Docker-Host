@@ -3,10 +3,9 @@ import shutil
 import stat
 import subprocess
 
+import deploy
 import pytest
 import yaml
-
-import deploy
 from conftest import expect_exit, make_cfg, make_ctx
 
 

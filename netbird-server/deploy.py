@@ -56,7 +56,7 @@ except ImportError:
         "error: PyYAML is not installed\n"
         "       install with: apt-get install -y python3-yaml\n"
     )
-    raise SystemExit(2)
+    raise SystemExit(2) from None
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SCHEMA_VERSION = 1
@@ -242,7 +242,7 @@ def load_config(path):
         except yaml.YAMLError as e:
             err("%s is not valid yaml: %s" % (path, e),
                 "compare against the committed netbird.example.yaml")
-            raise SystemExit(2)
+            raise SystemExit(2) from None
     if not isinstance(raw, dict):
         err("%s must be a mapping at the top level" % path,
             "compare against the committed netbird.example.yaml")
@@ -277,16 +277,16 @@ def _render_one(src, dst, variables):
         err("%s uses ${%s}, which netbird.yaml does not define"
             % (src, e.args[0]),
             "add it to Config.template_vars() or fix the template")
-        raise SystemExit(2)
+        raise SystemExit(2) from None
     except ValueError as e:
         err("%s is not a valid template: %s" % (src, e),
             "a bare '$' must be written '$$'")
-        raise SystemExit(2)
+        raise SystemExit(2) from None
 
     for bad in ("${", "{{"):
         if bad in text:
-            line = next((i + 1 for i, l in enumerate(text.splitlines())
-                         if bad in l), 0)
+            line = next((i + 1 for i, row in enumerate(text.splitlines())
+                         if bad in row), 0)
             err("%s still contains %s after rendering (line %d)"
                 % (dst, bad, line),
                 "a value substituted in must not itself contain a placeholder")
@@ -295,7 +295,7 @@ def _render_one(src, dst, variables):
         yaml.safe_load(text)
     except yaml.YAMLError as e:
         err("%s is not valid yaml after rendering: %s" % (dst, e))
-        raise SystemExit(2)
+        raise SystemExit(2) from None
     return text
 
 
@@ -402,11 +402,11 @@ def run(argv, ctx, timeout=60, check=False, stream=False):
     except subprocess.TimeoutExpired:
         if check:
             err("timed out after %ss: %s" % (timeout, " ".join(argv)))
-            raise SystemExit(3)
+            raise SystemExit(3) from None
         return 124, "", "timeout"
     except FileNotFoundError:
         err("command not found: %s" % argv[0])
-        raise SystemExit(2)
+        raise SystemExit(2) from None
     if check and p.returncode != 0:
         err(
             "%s failed" % " ".join(argv[:3]),
@@ -517,7 +517,7 @@ def phase_preflight(ctx, resources=True, need_rendered=False):
     except Exception:
         err("server.store_encryption_key must decode to exactly 32 bytes",
             "regenerate with: openssl rand -base64 32")
-        raise SystemExit(2)
+        raise SystemExit(2) from None
 
     clashing = []
     for k, v in cfg.env_file_vars().items():

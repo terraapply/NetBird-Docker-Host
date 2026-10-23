@@ -1,8 +1,7 @@
 """Regression tests for the deploy.py bugs fixed after the migration."""
 
-import yaml
-
 import deploy
+import yaml
 from conftest import expect_exit, make_cfg, make_ctx, write_config
 
 
