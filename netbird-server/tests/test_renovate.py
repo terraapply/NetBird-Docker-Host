@@ -49,3 +49,21 @@ def test_renovate_groups_netbird():
         wanted <= set(r.get("matchPackageNames", [])) and r.get("groupName")
         for r in load_renovate()["packageRules"]
     )
+
+
+def test_renovate_updates_precommit_hooks():
+    assert load_renovate().get("pre-commit", {}).get("enabled") is True
+
+
+def test_renovate_groups_lint_tools_with_their_hooks():
+    # requirements-dev.txt (CI) and .pre-commit-config.yaml must move together,
+    # or a hook that passed locally fails the same check in CI.
+    rules = load_renovate()["packageRules"]
+    for pair in (
+        {"ruff", "astral-sh/ruff-pre-commit"},
+        {"yamllint", "adrienverge/yamllint"},
+    ):
+        assert any(
+            pair <= set(r.get("matchPackageNames", [])) and r.get("groupName")
+            for r in rules
+        ), pair

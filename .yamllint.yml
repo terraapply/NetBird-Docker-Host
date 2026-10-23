@@ -3,7 +3,6 @@ extends: default
 ignore: |
   .docs/
   .venv/
-  .superpowers/
 
 rules:
   line-length: disable

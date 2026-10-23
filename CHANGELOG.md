@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- `oidc.redirect_uri` now also sets the redirect URI registered in Dex, so the fix printed by the `dex_redirect_uri` check works.
+- `oidc.redirect_uri` now also sets the redirect URI registered in Dex, so the README fix for "Unregistered redirect_uri" works. The `dex_redirect_uri` check now says a rejection means the running Dex is not serving the rendered config.
 - The first-run instructions point at `oidc.client_secret` and `server.store_encryption_key` in `netbird.yaml` instead of `.env` variables that do not exist.
 - A `netbird.yaml` with a YAML syntax error, or one that is not a mapping, is reported as a config error (exit 2) instead of a traceback.
 - A non-integer `schema_version` (for example `"1"`) is reported as a config error (exit 2) instead of a traceback.

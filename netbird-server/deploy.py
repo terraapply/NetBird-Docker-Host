@@ -1121,10 +1121,11 @@ def check_dex_redirect_uri(ctx):
         "dex rejected the redirect_uri (%d)" % r.status,
         [
             "sent: %s" % cfg.oidc_redirect_uri,
-            "dex matches redirect uris by exact string; a trailing slash",
-            "or extra path segment is a mismatch",
-            "fix: set oidc.redirect_uri in netbird.yaml, then ./deploy.py",
-            "dex/config.yaml is generated -- editing it is overwritten",
+            "dex/config.yaml registers exactly this uri, so the running dex is",
+            "not serving the rendered file",
+            "fix: ./deploy.py, which recreates dex when its config changed",
+            "if login fails with a different redirect_uri in the dex log, set",
+            "oidc.redirect_uri in netbird.yaml to that exact value",
         ],
     )
 

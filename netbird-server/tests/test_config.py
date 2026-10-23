@@ -1,5 +1,9 @@
+import shutil
+import subprocess
+import sys
+
 import deploy
-from conftest import expect_exit, make_cfg, write_config
+from conftest import SERVER_DIR, expect_exit, make_cfg, write_config
 
 
 def test_fixture_loads(raw):
@@ -64,3 +68,21 @@ def test_redact():
     ):
         assert deploy._redact(key, "x") == "<redacted>"
     assert deploy._redact("NETBIRD_DOMAIN", "a") == "a"
+
+
+def test_cli_resolves_paths_from_script_dir(raw, tmp_path, tmp_path_factory):
+    # The runbook may call netbird-server/deploy.py from the repo root: the
+    # default --config must still be the netbird.yaml next to deploy.py.
+    srv = tmp_path / "srv"
+    srv.mkdir()
+    shutil.copy(SERVER_DIR / "deploy.py", srv)
+    write_config(srv / "netbird.yaml", raw)
+    elsewhere = tmp_path_factory.mktemp("elsewhere")
+    p = subprocess.run(
+        [sys.executable, str(srv / "deploy.py"), "config"],
+        cwd=elsewhere,
+        capture_output=True,
+        text=True,
+    )
+    assert p.returncode == 0, p.stderr
+    assert "config:      %s" % (srv / "netbird.yaml") in p.stdout
