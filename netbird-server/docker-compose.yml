@@ -6,7 +6,7 @@
 #   dashboard        internal :80 web UI
 #   dex              internal :5556 OIDC broker in front of GitHub
 #
-# Everything here comes from the generated ./.env — see netbird.example.yaml.
+# Everything here comes from the generated ./.env (see netbird.example.yaml).
 # Container names are prefixed with the compose project name so two
 # deployments on one host cannot collide; set project.name in netbird.yaml.
 
@@ -104,7 +104,7 @@ services:
     restart: unless-stopped
     networks: [netbird]
     ports:
-      # STUN is UDP and cannot be proxied — it must be published on the host.
+      # STUN is UDP and cannot be proxied, so it must be published on the host.
       - "3478:3478/udp"
     volumes:
       - netbird_data:/var/lib/netbird
@@ -149,7 +149,7 @@ services:
       # Endpoints
       NETBIRD_MGMT_API_ENDPOINT: "https://${NETBIRD_DOMAIN}"
       NETBIRD_MGMT_GRPC_API_ENDPOINT: "https://${NETBIRD_DOMAIN}"
-      # OIDC — points at netbird-server's embedded IdP, not at Dex.
+      # OIDC: points at netbird-server's embedded IdP, not at Dex.
       # Dex is reached through the embedded IdP as an upstream connector.
       AUTH_AUDIENCE: "netbird-dashboard"
       AUTH_CLIENT_ID: "netbird-dashboard"

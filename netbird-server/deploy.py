@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Provision, update and validate the self-hosted NetBird stack.
 
-Reads netbird.yaml for non-secret configuration and .env for secrets, renders
-config.yaml, brings the stack up, then validates it end to end.
+Reads netbird.yaml, which holds all configuration and all secrets, renders
+config.yaml, dex/config.yaml and .env from it, brings the stack up, then
+validates it end to end.
 
   ./deploy.py              provision (default): render, up, wait, validate
   ./deploy.py update       pull the images named in netbird.yaml, recreate
@@ -60,7 +61,6 @@ except ImportError:
 HERE = os.path.dirname(os.path.abspath(__file__))
 SCHEMA_VERSION = 1
 
-# Secrets that must exist and be non-empty in .env.
 OK, WARN, FAIL, SKIP = "ok", "warn", "fail", "skip"
 
 
@@ -1061,7 +1061,7 @@ def phase_up(ctx):
 
 def print_report(cfg, results, mode):
     info("")
-    info("%s — %s" % (cfg.netbird_domain, mode))
+    info("%s: %s" % (cfg.netbird_domain, mode))
     info("")
     counts = {OK: 0, WARN: 0, FAIL: 0, SKIP: 0}
     for r in results:
@@ -1080,7 +1080,7 @@ def print_onboarding(cfg):
 first run complete. three things are not automated:
 
 1. create the break-glass admin
-   open https://%(nb)s — you will be redirected to /setup.
+   open https://%(nb)s and you will be redirected to /setup.
    set an email, a name and a long password, and store the password in your
    password manager: this is the way back in if github sso breaks.
    /setup stops responding once an owner exists.

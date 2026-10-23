@@ -1,7 +1,8 @@
-# NetBird combined server configuration — TEMPLATE.
+# NetBird combined server configuration (TEMPLATE).
 #
-# Render with ./render-config.sh (reads ./.env) -> config.yaml
-# Do not edit config.yaml directly; edit this file and re-render.
+# Rendered by ./deploy.py from netbird.yaml -> config.yaml
+# Do not edit config.yaml directly; edit netbird.yaml or this template and
+# re-run ./deploy.py.
 
 server:
   # Plain HTTP inside the container. Traefik terminates TLS.
@@ -27,7 +28,7 @@ server:
 
   auth:
     # Issuer of the tokens the dashboard and the netbird CLI consume. This is
-    # NetBird's own embedded Dex, not the GitHub broker — the broker is added
+    # NetBird's own embedded Dex, not the GitHub broker: the broker is added
     # on top of it as a Generic OIDC connector via the dashboard.
     issuer: "https://${NETBIRD_DOMAIN}/oauth2"
 
@@ -43,7 +44,7 @@ server:
       - "https://${NETBIRD_DOMAIN}/nb-auth"
       - "https://${NETBIRD_DOMAIN}/nb-silent-auth"
 
-    # Used by `netbird up` — the CLI spins up a loopback listener on 53000.
+    # Used by `netbird up`: the CLI spins up a loopback listener on 53000.
     cliRedirectURIs:
       - "http://localhost:53000/"
 
@@ -60,13 +61,13 @@ server:
   # collide in a shared namespace.
   #
   # NetBird has no sqlite -> postgres migration: switching engine starts from
-  # an empty database. The DSNs are derived from POSTGRES_PASSWORD by
-  # render-config.sh.
+  # an empty database. The DSNs are derived from postgres.password in
+  # netbird.yaml by deploy.py.
   store:
     engine: "postgres"
     dsn: "${NETBIRD_STORE_DSN}"
     # Encrypts sensitive columns. Must be base64 of exactly 32 bytes AND keep
-    # its '=' padding — this is decoded with Go's base64.StdEncoding.
+    # its '=' padding, because this is decoded with Go's base64.StdEncoding.
     # Losing this key means losing the encrypted user data.
     encryptionKey: "${NETBIRD_STORE_ENCRYPTION_KEY}"
 
@@ -76,7 +77,7 @@ server:
     engine: "postgres"
     dsn: "${NETBIRD_ACTIVITY_DSN}"
 
-  # Embedded Dex IdP — local users and IdP connectors (was idp.db).
+  # Embedded Dex IdP: local users and IdP connectors (was idp.db).
   authStore:
     engine: "postgres"
     dsn: "${NETBIRD_IDP_DSN}"

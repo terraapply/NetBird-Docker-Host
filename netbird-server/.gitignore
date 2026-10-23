@@ -1,4 +1,4 @@
-# Secrets — never commit
+# Secrets: never commit
 .env
 
 # Everything below is rendered by deploy.py from netbird.yaml and contains

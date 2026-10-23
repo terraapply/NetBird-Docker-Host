@@ -1,4 +1,4 @@
-# netbird.example.yaml — copy to netbird.yaml and fill in.
+# netbird.example.yaml: copy to netbird.yaml and fill in.
 #
 #   cp netbird.example.yaml netbird.yaml && chmod 600 netbird.yaml
 #

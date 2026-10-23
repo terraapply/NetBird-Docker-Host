@@ -1,5 +1,7 @@
 # NetBird self-hosted control plane
 
+Part of [NetBird Docker Host](../README.md).
+
 A private VPN control plane on one Linux VM, where **logging in means being a
 member of your GitHub organisation**. Everything is driven by a single config
 file and a single command.
@@ -10,7 +12,7 @@ cp netbird.example.yaml netbird.yaml   # fill it in
 ```
 
 `deploy.py` is the whole interface. It renders every config file, starts the
-stack, waits for it to settle, and runs nine checks against the running system —
+stack, waits for it to settle, and runs nine checks against the running system,
 telling you what to fix when one fails.
 
 ---
@@ -40,7 +42,7 @@ Six steps. Budget about 30 minutes, most of it waiting for DNS.
 ./deploy.py config       # show the resolved config, secrets hidden
 ```
 
-Plain `docker compose` works too — `deploy.py` generates the `.env` it needs:
+Plain `docker compose` works too: `deploy.py` generates the `.env` it needs:
 
 ```bash
 docker compose ps
@@ -57,7 +59,7 @@ touched* · `3` failed to start · `4` running but a check failed.
 | Change a hostname, secret or setting | Edit `netbird.yaml`, run `./deploy.py` |
 | Turn local email/password login on or off | Set `server.local_auth` in `netbird.yaml`, run `./deploy.py` |
 | Upgrade NetBird, Dex or Traefik | Bump the tag under `images:`, run `./deploy.py update` |
-| See why something is broken | `./deploy.py validate` — each failure prints its fix |
+| See why something is broken | `./deploy.py validate`; each failure prints its fix |
 | Read logs | `docker compose logs -f netbird-server` |
 | Back up | [Backups](#backups) |
 
@@ -73,8 +75,8 @@ touched* · `3` failed to start · `4` running but a check failed.
 Linux with Docker Engine and the Compose v2 plugin. Ubuntu 22.04/24.04 or
 Debian 12 assumed below.
 
-2 vCPU / 4 GB RAM is comfortable. It does run on 1 vCPU / 1.5 GB — that is what
-the reference deployment uses — but with little headroom, so keep some swap and
+2 vCPU / 4 GB RAM is comfortable. It does run on 1 vCPU / 1.5 GB (that is what
+the reference deployment uses), but with little headroom, so keep some swap and
 expect first boot to be slow while Let's Encrypt and the database migrations run.
 
 ```bash
@@ -92,7 +94,7 @@ sudo apt-get install -y jq curl python3-yaml
 |---|---|---|
 | 80 | TCP | HTTP → HTTPS redirect; ACME fallback |
 | 443 | TCP | Dashboard, REST API, gRPC (management + signal), relay, Dex |
-| 3478 | UDP | Embedded STUN — **cannot** be proxied, must reach the host directly |
+| 3478 | UDP | Embedded STUN: **cannot** be proxied, must reach the host directly |
 
 ```bash
 sudo ufw allow 80/tcp
@@ -117,7 +119,7 @@ depend on, and carries no UDP at all for STUN.
 Substitute your own domain for `example.com` throughout this guide, and set the
 same two names in `netbird.yaml` under `domains:`.
 
-Check before continuing — Let's Encrypt fails otherwise:
+Check before continuing, Let's Encrypt fails otherwise:
 
 ```bash
 dig +short netbird.example.com
@@ -136,7 +138,7 @@ Create it **inside the organisation**, not on a personal account:
 | Homepage URL | `https://netbird.example.com` |
 | Authorization callback URL | `https://dex.netbird.example.com/callback` |
 
-Register, then **Generate a new client secret** and copy both values — the
+Register, then **Generate a new client secret** and copy both values. The
 secret is shown once.
 
 > **If your org enforces OAuth App access restrictions**, an owner must approve
@@ -144,7 +146,7 @@ secret is shown once.
 > every login fails with an unhelpful error and Dex logs `403 Forbidden` reading
 > org membership. This is the most common cause of "GitHub SSO doesn't work".
 
-Dex requests `read:user`, `user:email` and `read:org` itself — nothing to set.
+Dex requests `read:user`, `user:email` and `read:org` itself; nothing to set.
 
 ---
 
@@ -152,10 +154,11 @@ Dex requests `read:user`, `user:email` and `read:org` itself — nothing to set.
 
 ### Fill in netbird.yaml
 
-Copy this directory to the VM (e.g. `/opt/netbird`), then:
+Clone the repository on the VM, then:
 
 ```bash
-cd /opt/netbird
+git clone https://github.com/terraapply/NetBird-Docker-Host.git
+cd NetBird-Docker-Host/netbird-server
 cp netbird.example.yaml netbird.yaml
 chmod 600 netbird.yaml
 ```
@@ -182,7 +185,7 @@ becomes a boolean. `deploy.py` catches both, but quoting saves the round trip.
 > backup is unreadable, and it **cannot be changed later** without destroying
 > the existing data. Keep a copy somewhere other than this host.
 >
-> It must also keep its trailing `=` padding — Go decodes it with
+> It must also keep its trailing `=` padding: Go decodes it with
 > `base64.StdEncoding`, which rejects unpadded input. `deploy.py` refuses to run
 > if you strip it.
 
@@ -192,11 +195,11 @@ becomes a boolean. `deploy.py` catches both, but quoting saves the round trip.
 ./deploy.py
 ```
 
-Traefik requests two certificates over TLS-ALPN-01, which takes 30–60 seconds on
+Traefik requests two certificates over TLS-ALPN-01, which takes 30 to 60 seconds on
 a first run. `deploy.py` waits, then reports:
 
 ```
-netbird.example.com — provision
+netbird.example.com: provision
 
 [ok  ] services           5/5 running, images match
 [ok  ] postgres           ready, 3/3 databases present
@@ -210,7 +213,7 @@ netbird.example.com — provision
 ```
 
 Anything but `ok` prints the cause and the command that fixes it. If TLS or
-either issuer fails, stop and fix it — nothing downstream works without them.
+either issuer fails, stop and fix it; nothing downstream works without them.
 
 ### After the first run
 
@@ -218,7 +221,7 @@ either issuer fails, stop and fix it — nothing downstream works without them.
 
 **1. Create the break-glass admin.** Open `https://netbird.example.com`; you are
 redirected to `/setup`. Set an email, a name and a strong password, and store the
-password in your password manager — this is the way back in if GitHub SSO breaks.
+password in your password manager: this is the way back in if GitHub SSO breaks.
 `/setup` stops responding once an owner exists.
 
 **2. Add Dex as an identity provider.** *Settings → Identity Providers → Add*:
@@ -226,12 +229,12 @@ password in your password manager — this is the way back in if GitHub SSO brea
 | Field | Value |
 |---|---|
 | Type | `Generic OIDC` |
-| Name | `GitHub` — this becomes the login button label |
+| Name | `GitHub` (this becomes the login button label) |
 | Client ID | `netbird` |
 | Client Secret | `oidc.client_secret` from `netbird.yaml` |
 | Issuer | `https://dex.netbird.example.com` |
 
-The dashboard may show a Redirect URL ending in a connector ID. Ignore it —
+The dashboard may show a Redirect URL ending in a connector ID. Ignore it:
 netbird-server sends a plain `/oauth2/callback`, which is already registered.
 
 **3. Approve your GitHub user.** The first person through the GitHub button
@@ -247,7 +250,7 @@ Optionally register the post-logout URL
 
 1. **GitHub login works.** Log out, click **GitHub**, land back in the dashboard.
 2. **A non-member is refused.** Have someone outside the org try it. *Do not skip
-   this* — without it you have verified that OAuth works, not that access control
+   this*: without it you have verified that OAuth works, not that access control
    does.
 3. **Break-glass still works.** Log out, log in with the local admin.
 4. **A peer connects:**
@@ -267,7 +270,7 @@ Optionally register the post-logout URL
 ### Why there is a Dex container
 
 **GitHub is not an OIDC provider.** It has no
-`/.well-known/openid-configuration` and never issues an `id_token` — it speaks
+`/.well-known/openid-configuration` and never issues an `id_token`; it speaks
 plain OAuth2. NetBird only accepts OIDC providers, so GitHub cannot be plugged in
 directly.
 
@@ -285,7 +288,7 @@ NetBird embedded Dex          issuer: https://netbird.example.com/oauth2
 Standalone Dex                issuer: https://dex.netbird.example.com
       │  GitHub connector, orgs: [ <your-org> ]
       ▼
-GitHub OAuth App              org members only — everyone else stops here
+GitHub OAuth App              org members only, everyone else stops here
 ```
 
 The org check happens in Dex, before NetBird sees the user.
@@ -305,7 +308,7 @@ you out of your own control plane. See
 | `netbird-dex` | GitHub → OIDC broker |
 | `netbird-postgres` | all three NetBird datastores |
 
-Since v0.62 NetBird ships management, signal, relay and STUN as one binary — so
+Since v0.62 NetBird ships management, signal, relay and STUN as one binary, so
 this is five containers, not the seven older guides describe.
 
 ### Configuration
@@ -328,7 +331,7 @@ whose config actually changed gets recreated and one whose config did not is lef
 alone. Without that, re-rendering would be a silent no-op: Docker binds a mounted
 file by inode, and a running container keeps reading the old one.
 
-`dex/config.yaml` is `0644`, not `0600`, deliberately — the Dex container runs as
+`dex/config.yaml` is `0644`, not `0600`, deliberately: the Dex container runs as
 UID 1001 and cannot read a `0600` file owned by you. The `dex/` directory is
 `0700` instead, which protects it on the host just as well.
 
@@ -341,12 +344,12 @@ no environment expansion in its config, which is why templates exist at all.
 | File | Purpose |
 |---|---|
 | `netbird.example.yaml` | Committed template, every field documented |
-| `netbird.yaml` | **Not committed.** Your config and secrets — the only file you edit |
+| `netbird.yaml` | **Not committed.** Your config and secrets, the only file you edit |
 | `deploy.py` | Renders configs, starts the stack, validates it |
 | `docker-compose.yml` | The stack |
 | `template/*.tmpl` | Templates for the server and Dex configs |
 | `postgres/init-databases.sh` | Creates the two extra databases on first boot |
-| `config.yaml`, `dex/config.yaml`, `.env` | **Generated** — never edit |
+| `config.yaml`, `dex/config.yaml`, `.env` | **Generated**, never edit |
 
 ---
 
@@ -367,7 +370,7 @@ cp netbird.yaml netbird-conf-$(date +%F).yaml
 Keep the two together: rows are encrypted with `server.store_encryption_key`, so
 a dump without the config is unreadable.
 
-`pg_dumpall` is deliberate — state spans `netbird` (peers, groups, policies,
+`pg_dumpall` is deliberate: state spans `netbird` (peers, groups, policies,
 setup keys), `netbird_events` (audit log) and `netbird_idp` (local users and IdP
 connectors), and dumping them one by one invites forgetting one.
 
@@ -414,7 +417,7 @@ fails at token exchange.
 
 ## Troubleshooting
 
-Run `./deploy.py validate` first — most failures name their own fix.
+Run `./deploy.py validate` first; most failures name their own fix.
 
 | Symptom | Cause | Fix |
 |---|---|---|
@@ -445,7 +448,7 @@ server:
   local_auth: false
 ```
 
-then `./deploy.py`. Note the flag is positive — `local_auth: false` renders
+then `./deploy.py`. Note the flag is positive: `local_auth: false` renders
 NetBird's `localAuthDisabled: true`.
 
 Only do this after the checks above pass, and only if you accept that GitHub
@@ -468,14 +471,14 @@ Re-run `./deploy.py`. Only members of those teams can authenticate.
 group claims. *Settings → Groups → JWT group sync*, claim name `groups`. You can
 then write access policies per GitHub team.
 
-**NetBird Proxy / CrowdSec.** Deliberately omitted — they add attack surface and
+**NetBird Proxy / CrowdSec.** Deliberately omitted: they add attack surface and
 need a `*.netbird` wildcard CNAME. See the
 [reverse-proxy guide](https://docs.netbird.io/selfhosted/migration/enable-reverse-proxy)
 if you want them later.
 
 ---
 
-## Appendix — unattended first run
+## Appendix: unattended first run
 
 The owner account can be created over the API instead of through `/setup`. Add to
 the `netbird-server` service:
