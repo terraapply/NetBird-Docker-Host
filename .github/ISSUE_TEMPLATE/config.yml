@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/terraapply/NetBird-Docker-Host/security/advisories/new
+    about: Report privately, never in a public issue. See SECURITY.md.
+  - name: Bug in NetBird itself
+    url: https://github.com/netbirdio/netbird/issues
+    about: Problems in NetBird rather than in this repo's setup go upstream.
