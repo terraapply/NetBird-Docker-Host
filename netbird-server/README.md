@@ -83,10 +83,11 @@ expect first boot to be slow while Let's Encrypt and the database migrations run
 curl -fsSL https://get.docker.com | sh
 sudo usermod -aG docker "$USER"   # log out and back in
 docker compose version            # must print v2.x
-sudo apt-get install -y jq curl python3-yaml
+sudo apt-get install -y git jq curl python3-yaml
 ```
 
-`python3-yaml` is what `deploy.py` needs; there are no other dependencies.
+`git` fetches this repository and `python3-yaml` is what `deploy.py` needs;
+nothing else is installed on the host.
 
 ### Inbound ports
 
@@ -361,11 +362,15 @@ Two things matter: the database and `netbird.yaml`. Everything else is derived,
 and the `netbird_data` volume now holds only re-downloadable geolocation data.
 
 ```bash
+mkdir -p ~/netbird-backups && chmod 700 ~/netbird-backups
 docker compose exec -T postgres pg_dumpall -U netbird \
-  | gzip > netbird-db-$(date +%F).sql.gz
+  | gzip > ~/netbird-backups/netbird-db-$(date +%F).sql.gz
 
-cp netbird.yaml netbird-conf-$(date +%F).yaml
+cp netbird.yaml ~/netbird-backups/netbird-conf-$(date +%F).yaml
 ```
+
+The backups go outside the git clone on purpose, so they can never be committed.
+Copy `~/netbird-backups` off this host as well.
 
 Keep the two together: rows are encrypted with `server.store_encryption_key`, so
 a dump without the config is unreadable.
@@ -380,7 +385,7 @@ Restore into an empty instance:
 docker compose down
 docker volume rm netbird_netbird_pgdata
 docker compose up -d postgres
-gunzip -c netbird-db-YYYY-MM-DD.sql.gz \
+gunzip -c ~/netbird-backups/netbird-db-YYYY-MM-DD.sql.gz \
   | docker compose exec -T postgres psql -U netbird -d postgres
 ./deploy.py
 ```

@@ -45,7 +45,7 @@ The server VM runs five containers: `traefik` (TLS and routing), `netbird-server
 Server VM:
 
 - Ubuntu 22.04/24.04 or Debian 12. 2 vCPU / 4 GB RAM recommended; 1 vCPU / 1.5 GB works with some swap. See [VM](netbird-server/README.md#vm).
-- Docker Engine with the Compose v2 plugin, and `python3-yaml`.
+- Docker Engine with the Compose v2 plugin, `git` and `python3-yaml`.
 - Two DNS-only A records pointing at the VM, for example `netbird.<domain>` and `dex.netbird.<domain>`. See [DNS](netbird-server/README.md#dns).
 - Inbound `80/tcp`, `443/tcp` and `3478/udp`. See [Inbound ports](netbird-server/README.md#inbound-ports).
 - A GitHub organisation where you can create an OAuth App. See [GitHub OAuth App](netbird-server/README.md#github-oauth-app).

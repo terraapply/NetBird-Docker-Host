@@ -8,6 +8,12 @@
 /config.yaml
 /dex/config.yaml
 
+# Backups written by the README commands, and deploy.py's temporary render
+# files if it is interrupted mid-write. Both hold secrets.
+netbird-conf-*.yaml
+netbird-db-*.sql.gz
+.*.tmp
+
 # Local overrides
 docker-compose.override.yml
 
