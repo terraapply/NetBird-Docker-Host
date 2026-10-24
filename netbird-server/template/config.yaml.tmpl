@@ -1,0 +1,83 @@
+# NetBird combined server configuration (TEMPLATE).
+#
+# Rendered by ./deploy.py from netbird.yaml -> config.yaml
+# Do not edit config.yaml directly; edit netbird.yaml or this template and
+# re-run ./deploy.py.
+
+server:
+  # Plain HTTP inside the container. Traefik terminates TLS.
+  listenAddress: ":80"
+
+  # Public address handed to peers. Must match the Traefik-served hostname.
+  exposedAddress: "https://${NETBIRD_DOMAIN}:443"
+
+  # Embedded STUN. UDP, published directly on the host in docker-compose.yml.
+  stunPorts:
+    - 3478
+
+  metricsPort: 9090
+  healthcheckAddress: ":9000"
+
+  logLevel: "info"
+  logFile: "console"
+
+  # Shared secret used by the embedded relay to authenticate clients.
+  authSecret: "${NETBIRD_RELAY_AUTH_SECRET}"
+
+  dataDir: "/var/lib/netbird"
+
+  auth:
+    # Issuer of the tokens the dashboard and the netbird CLI consume. This is
+    # NetBird's own embedded Dex, not the GitHub broker: the broker is added
+    # on top of it as a Generic OIDC connector via the dashboard.
+    issuer: "https://${NETBIRD_DOMAIN}/oauth2"
+
+    # Set from server.local_auth in netbird.yaml. Note the inversion: that key
+    # is positive ("local login works"), this one is NetBird's negative flag.
+    localAuthDisabled: ${LOCAL_AUTH_DISABLED}
+
+    signKeyRefreshEnabled: true
+
+    sessionCookieEncryptionKey: "${NETBIRD_SESSION_COOKIE_KEY}"
+
+    dashboardRedirectURIs:
+      - "https://${NETBIRD_DOMAIN}/nb-auth"
+      - "https://${NETBIRD_DOMAIN}/nb-silent-auth"
+
+    # Used by `netbird up`: the CLI spins up a loopback listener on 53000.
+    cliRedirectURIs:
+      - "http://localhost:53000/"
+
+  reverseProxy:
+    # Traefik's fixed address on the compose bridge network. Without this the
+    # server sees every request as coming from the proxy and client IPs in the
+    # access log and in peer geo-resolution are wrong.
+    trustedHTTPProxies:
+      - "172.30.0.10/32"
+
+  # Three separate stores, three separate databases in one Postgres instance.
+  # They are kept apart because the main store's GORM models, the activity
+  # store and the embedded Dex schema each create their own tables and would
+  # collide in a shared namespace.
+  #
+  # NetBird has no sqlite -> postgres migration: switching engine starts from
+  # an empty database. The DSNs are derived from postgres.password in
+  # netbird.yaml by deploy.py.
+  store:
+    engine: "postgres"
+    dsn: "${NETBIRD_STORE_DSN}"
+    # Encrypts sensitive columns. Must be base64 of exactly 32 bytes AND keep
+    # its '=' padding, because this is decoded with Go's base64.StdEncoding.
+    # Losing this key means losing the encrypted user data.
+    encryptionKey: "${NETBIRD_STORE_ENCRYPTION_KEY}"
+
+  # Audit log. The server turns this block into NB_ACTIVITY_EVENT_* environment
+  # variables internally; this yaml is the supported interface.
+  activityStore:
+    engine: "postgres"
+    dsn: "${NETBIRD_ACTIVITY_DSN}"
+
+  # Embedded Dex IdP: local users and IdP connectors (was idp.db).
+  authStore:
+    engine: "postgres"
+    dsn: "${NETBIRD_IDP_DSN}"
