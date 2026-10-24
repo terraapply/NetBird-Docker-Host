@@ -1,6 +1,5 @@
-import pytest
-
 import deploy
+import pytest
 from conftest import expect_exit, make_cfg, make_ctx, write_config
 
 pytestmark = pytest.mark.usefixtures("server_dir", "git_untracked")
@@ -17,12 +16,18 @@ def test_valid_config_passes(raw, tmp_path):
 
 def test_unquoted_numeric_secret_exits_2(raw, tmp_path, capsys):
     raw["postgres"]["password"] = 123456
-    expect_exit(capsys, lambda: preflight(raw, tmp_path),
-                "must be quoted strings", "postgres.password (int)")
+    expect_exit(
+        capsys,
+        lambda: preflight(raw, tmp_path),
+        "must be quoted strings",
+        "postgres.password (int)",
+    )
 
 
 def test_unpadded_store_key_exits_2(raw, tmp_path, capsys):
-    raw["server"]["store_encryption_key"] = raw["server"]["store_encryption_key"].rstrip("=")
+    raw["server"]["store_encryption_key"] = raw["server"][
+        "store_encryption_key"
+    ].rstrip("=")
     expect_exit(capsys, lambda: preflight(raw, tmp_path), "padding")
 
 

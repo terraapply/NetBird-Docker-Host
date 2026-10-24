@@ -1,0 +1,16 @@
+extends: default
+
+ignore: |
+  .docs/
+  .venv/
+
+rules:
+  line-length: disable
+  braces:
+    max-spaces-inside: 1
+  comments:
+    min-spaces-from-content: 1
+  document-start: disable
+  truthy:
+    allowed-values: ["true", "false"]
+    check-keys: false

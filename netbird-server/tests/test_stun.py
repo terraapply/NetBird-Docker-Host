@@ -7,17 +7,23 @@ MAGIC = 0x2112A442
 
 
 def xor_mapped(ip, port):
-    value = struct.pack("!BBHI", 0, 1, port ^ 0x2112,
-                        int(ipaddress.IPv4Address(ip)) ^ MAGIC)
+    value = struct.pack(
+        "!BBHI", 0, 1, port ^ 0x2112, int(ipaddress.IPv4Address(ip)) ^ MAGIC
+    )
     return struct.pack("!HH", 0x0020, len(value)) + value
 
 
 def test_xor_mapped_ipv4():
-    assert deploy._parse_xor_mapped(xor_mapped("203.0.113.10", 41234)) == "203.0.113.10:41234"
+    assert (
+        deploy._parse_xor_mapped(xor_mapped("203.0.113.10", 41234))
+        == "203.0.113.10:41234"
+    )
 
 
 def test_mapped_address_fallback():
-    attr = struct.pack("!HH", 0x0001, 8) + struct.pack("!BBH4B", 0, 1, 3478, 198, 51, 100, 7)
+    attr = struct.pack("!HH", 0x0001, 8) + struct.pack(
+        "!BBH4B", 0, 1, 3478, 198, 51, 100, 7
+    )
     assert deploy._parse_xor_mapped(attr) == "198.51.100.7:3478"
 
 

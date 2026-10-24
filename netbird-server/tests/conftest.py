@@ -37,8 +37,9 @@ def make_cfg(raw, path="netbird.yaml"):
 
 
 def make_ctx(cfg):
-    args = argparse.Namespace(timeout_scale=1.0, strict=False,
-                              show_onboarding=False, only=None, skip=None)
+    args = argparse.Namespace(
+        timeout_scale=1.0, strict=False, show_onboarding=False, only=None, skip=None
+    )
     return deploy.Ctx(cfg, args)
 
 

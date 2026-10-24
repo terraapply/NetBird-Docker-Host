@@ -1,8 +1,7 @@
 """Regression tests for the deploy.py bugs fixed after the migration."""
 
-import yaml
-
 import deploy
+import yaml
 from conftest import expect_exit, make_cfg, make_ctx, write_config
 
 
@@ -14,7 +13,8 @@ def render_dex(server_dir, raw):
 def test_dex_redirect_uri_default(server_dir, raw):
     dex = render_dex(server_dir, raw)
     assert dex["staticClients"][0]["redirectURIs"] == [
-        "https://netbird.example.com/oauth2/callback"]
+        "https://netbird.example.com/oauth2/callback"
+    ]
 
 
 def test_dex_redirect_uri_override(server_dir, raw):
@@ -63,3 +63,14 @@ def test_preflight_without_git_warns(server_dir, raw, tmp_path, capsys, monkeypa
     path = write_config(tmp_path / "netbird.yaml", raw)
     deploy.phase_preflight(make_ctx(make_cfg(raw, str(path))), resources=False)
     assert "warn: git not found" in capsys.readouterr().out
+
+
+def test_dex_redirect_uri_fail_hint_points_at_stale_dex(raw, monkeypatch):
+    # Dex registers exactly cfg.oidc_redirect_uri, so a rejection means the
+    # running Dex is not serving the rendered config; changing
+    # oidc.redirect_uri cannot fix that.
+    monkeypatch.setattr(deploy, "https_get", lambda *a, **kw: deploy.Resp(400, {}, ""))
+    result = deploy.check_dex_redirect_uri(make_ctx(make_cfg(raw)))
+    assert result.status == deploy.FAIL
+    assert any("not serving the rendered" in h for h in result.hints)
+    assert not any(h.startswith("fix: set oidc.redirect_uri") for h in result.hints)

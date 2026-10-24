@@ -1,0 +1,41 @@
+name: Bug report
+description: Something in this repo does not work as documented.
+labels: [bug]
+body:
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - server
+        - agent (Docker)
+        - agent (native)
+        - docs
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you ran, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: validate
+    attributes:
+      label: Output of ./deploy.py validate
+      description: Server issues only. Paste the full output.
+      render: text
+  - type: textarea
+    id: config
+    attributes:
+      label: Output of ./deploy.py config
+      description: Server issues only. Secrets are redacted by the tool, but check before posting and replace your real domains if you prefer.
+      render: text
+  - type: input
+    id: os
+    attributes:
+      label: OS and version
+      placeholder: Ubuntu 24.04
+    validations:
+      required: true
