@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-24
+
 ### Added
 
 - Self-hosted NetBird server stack in `netbird-server/`: Traefik with Let's Encrypt, NetBird server, dashboard, Dex for GitHub-organisation login and Postgres, driven by `deploy.py` from a single `netbird.yaml`.
@@ -22,3 +24,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A `netbird.yaml` with a YAML syntax error, or one that is not a mapping, is reported as a config error (exit 2) instead of a traceback.
 - A non-integer `schema_version` (for example `"1"`) is reported as a config error (exit 2) instead of a traceback.
 - `deploy.py` no longer exits on hosts without `git`; it warns and skips the check that `netbird.yaml` is not committed.
+
+[Unreleased]: https://github.com/terraapply/NetBird-Docker-Host/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/terraapply/NetBird-Docker-Host/releases/tag/v0.1.0
