@@ -1,0 +1,39 @@
+# Test fixture for the deploy.py unit tests. Every value is fake.
+schema_version: 1
+
+project:
+  name: netbird
+
+domains:
+  netbird: netbird.example.com
+  dex: dex.netbird.example.com
+
+acme:
+  email: admin@example.com
+
+github:
+  org: example-org
+  client_id: "Ov23liTESTCLIENTID00"
+  client_secret: "1111111111111111111111111111111111111111111111111111111111111111"
+
+images:
+  traefik: traefik:v3.6
+  netbird_server: netbirdio/netbird-server:0.77.0
+  dashboard: netbirdio/dashboard:v2.91.1
+  dex: ghcr.io/dexidp/dex:v2.45.1
+  postgres: postgres:17-alpine
+
+postgres:
+  user: netbird
+  password: "2222222222222222222222222222222222222222222222222222222222222222"
+  databases: [netbird, netbird_events, netbird_idp]
+
+oidc:
+  client_id: netbird
+  client_secret: "3333333333333333333333333333333333333333333333333333333333333333"
+
+server:
+  local_auth: true
+  relay_auth_secret: "4444444444444444444444444444444444444444444444444444444444444444"
+  session_cookie_key: "5555555555555555555555555555555555555555555555555555555555555555"
+  store_encryption_key: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="

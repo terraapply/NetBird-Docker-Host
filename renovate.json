@@ -1,0 +1,58 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Image tags under images: in netbird.example.yaml",
+      "managerFilePatterns": [
+        "/^netbird-server/netbird\\.example\\.yaml$/"
+      ],
+      "matchStrings": [
+        "\\n  \\w+: (?<depName>[a-z0-9][a-z0-9./_-]*):(?<currentValue>[A-Za-z0-9][A-Za-z0-9._-]*)"
+      ],
+      "datasourceTemplate": "docker"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "A Postgres major cannot start on the previous major's data directory",
+      "matchPackageNames": [
+        "postgres"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "NetBird server and dashboard are upgraded together",
+      "matchPackageNames": [
+        "netbirdio/netbird-server",
+        "netbirdio/dashboard"
+      ],
+      "groupName": "netbird"
+    },
+    {
+      "description": "ruff in requirements-dev.txt and its pre-commit hook move together",
+      "matchPackageNames": [
+        "ruff",
+        "astral-sh/ruff-pre-commit"
+      ],
+      "groupName": "ruff"
+    },
+    {
+      "description": "yamllint in requirements-dev.txt and its pre-commit hook move together",
+      "matchPackageNames": [
+        "yamllint",
+        "adrienverge/yamllint"
+      ],
+      "groupName": "yamllint"
+    }
+  ],
+  "pre-commit": {
+    "enabled": true
+  }
+}
