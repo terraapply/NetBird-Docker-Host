@@ -36,27 +36,33 @@ Never open these: not with `cat`, an editor, a file-reading tool, or a `grep` th
 - `netbird-agent/docker/setup-key` and `~/netbird-setup-key`
 - anything under `~/netbird-backups/`
 
-Never run `docker compose config` or `docker inspect` on the server, directly or through `./deploy.py compose -- config`: both print `POSTGRES_PASSWORD`.
+Secrets also leak through commands that never name these files. Never run:
+
+- `docker compose config` or `docker inspect` on the server, directly or through `./deploy.py compose -- config`, nor `env`, `printenv` or `/proc/*/environ` inside a container: all print `POSTGRES_PASSWORD`.
+- `grep -r` over `netbird-server/` or a home directory: it reads ignored files, secrets included. Search code with `git grep`, which skips them.
+- a secret generator such as `openssl rand`: its output is the secret. The user runs it in their own terminal, not through a shell your tool shows you (such as Claude Code's `!` prefix), which puts the output into the conversation. The same goes for any command with a secret in it, like the README's `ALTER USER`.
 
 Do this instead:
 
 - See the server config with `./deploy.py config`. It prints every value and shows secrets as `<redacted>`.
-- Find unfinished config with `./deploy.py`: its preflight stops with exit 2, before touching anything, and names every secret still empty or set to `replace_me`. Once the stack has been rendered, `./deploy.py validate` runs the same preflight.
+- Find unfinished config with `grep -c replace_me netbird.yaml`, expecting `0`. Before the first deploy, `./deploy.py` also stops with exit 2 and names every secret still empty or `replace_me`, but when nothing is missing it goes on to deploy, so run it only when you mean to. After the first deploy, `./deploy.py validate` runs the same check without changing anything.
 - Check these files by metadata only: `stat`, `ls -l`, `test -s`, `grep -c` (a count, never the lines).
-- Change a non-secret key (an image tag, `local_auth`, a domain) with one targeted command, for example `sed -i 's|^\(  netbird_server: \).*|\1netbirdio/netbird-server:<tag>|' netbird.yaml`. Show it to the user before running it, then confirm the result with `./deploy.py config`. Claude Code's Edit tool needs a Read first, so do not use it on these files.
-- For a secret value, tell the user which key to fill and the command that generates it (for example `openssl rand -base64 32`), and let them type it in.
+- Change a non-secret key (an image tag, `local_auth`, a domain) with one targeted command. Keys such as `dex`, `client_id` and `client_secret` appear twice, so anchor the pattern on the key's current value too, and first check it matches exactly one line: `grep -c '^  dex: ghcr.io/dexidp/dex:' netbird.yaml` prints `1`. Then show the user the edit, for example `sed -i 's|^\(  dex: \)ghcr.io/dexidp/dex:.*|\1ghcr.io/dexidp/dex:<tag>|' netbird.yaml`, run it, and compare the whole `./deploy.py config` output with the one from before, not only the changed value. Claude Code's Edit tool needs a Read first, so do not use it on these files.
+- For a secret value, tell the user which key to fill and which command generates it, and let them run it and type the value in themselves.
 
 `netbird-agent/docker/.env` holds only the management URL and hostname, so it is not on this list.
 
 ## Where am I?
 
-Work this out with read-only checks before running anything, and tell the user what you concluded. Ask when the signals disagree.
+Work this out with read-only checks before running anything. Tell the user what you concluded and have them confirm it before the first command that changes state or the first diagnosis: a wrong guess runs server or agent commands on the wrong machine.
 
-| Signal | You are on |
+| Signal | Suggests |
 |---|---|
-| `netbird-server/netbird.yaml` exists (`test -f`), or `docker ps --format '{{.Names}}'` lists `netbird-server` | the server VM |
-| `command -v netbird` finds the CLI, `netbird-agent/docker/.env` exists, or `docker ps` lists `netbird-agent` | an agent VM |
+| `docker ps --format '{{.Names}}'` lists `netbird-server` | the server VM |
+| `systemctl is-active netbird` prints `active`, or `docker ps` lists `netbird-agent` | an agent VM |
 | none of these | a laptop, or any machine with only the code |
+
+A file or a CLI alone is weak evidence: an admin's laptop often runs the NetBird client and may hold a filled-in `netbird.yaml`. Trust a running service or container, and ask when unsure. On a fresh VM nothing runs yet, so ask which role it will have.
 
 `docker ps` may need `sudo`. If it is refused, say so instead of guessing.
 
@@ -71,7 +77,7 @@ Ask, and wait for a yes, before:
 - `docker compose down -v` or `docker volume rm` (deletes the database or a peer registration)
 - restoring a database backup
 - `shred` of a setup-key file
-- setting `server.local_auth: false` (GitHub becomes the only way in)
+- setting `server.local_auth: false`, and only once every check in [Prove it works](netbird-server/README.md#prove-it-works) has passed: GitHub becomes the only way in
 - rotating any secret
 - deleting a peer in the dashboard
 - `git push`

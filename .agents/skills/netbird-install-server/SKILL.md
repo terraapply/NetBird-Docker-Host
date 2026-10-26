@@ -12,11 +12,11 @@ The procedure is the [Quick start](../../../netbird-server/README.md#quick-start
 | Step | README section | Evidence before moving on |
 |---|---|---|
 | 1. VM | [VM](../../../netbird-server/README.md#vm) | `docker compose version` prints v2.x, `python3 -c 'import yaml'` exits 0, `free -m` shows at least 1.5 GB (with swap below 4 GB) |
-| 2. Ports | [Inbound ports](../../../netbird-server/README.md#inbound-ports) | `sudo ufw status` lists 80/tcp, 443/tcp and 3478/udp; the user confirms the cloud security group or router, which you cannot see |
+| 2. Ports | [Inbound ports](../../../netbird-server/README.md#inbound-ports) | `sudo ufw status` lists 80/tcp, 443/tcp and 3478/udp, or reports `inactive` (common on cloud VMs, where the security group is the firewall); the user confirms the cloud security group or router, which you cannot see |
 | 3. DNS | [DNS](../../../netbird-server/README.md#dns) | `dig +short` for both names returns the VM's public IP. Any other address means a proxied record or a typo. |
 | 4. GitHub OAuth App | [GitHub OAuth App](../../../netbird-server/README.md#github-oauth-app) | Created under the organisation, callback exactly `https://<dex domain>/callback`, user holds the client ID and secret. Ask whether the org restricts OAuth Apps; if so an owner must approve it. |
 | 5. `netbird.yaml` | [Fill in netbird.yaml](../../../netbird-server/README.md#fill-in-netbirdyaml) | See below |
-| 6. Run | [Run it](../../../netbird-server/README.md#run-it) | `./deploy.py` exits 0 and every check prints `ok` |
+| 6. Run | [Run it](../../../netbird-server/README.md#run-it) | `./deploy.py` exits 0. A `warn` on `stun` with a hint about NAT hairpinning still exits 0: the router cannot loop back, external clients are fine. |
 | 7. First login | [After the first run](../../../netbird-server/README.md#after-the-first-run), [Prove it works](../../../netbird-server/README.md#prove-it-works) | The user confirms each of the three setup steps and the four manual checks, including that a non-member is refused |
 
 ## Filling in netbird.yaml without opening it

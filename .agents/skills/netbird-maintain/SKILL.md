@@ -17,7 +17,7 @@ Before anything else, apply [Where am I?](../../../AGENTS.md#where-am-i), [Secre
 Follow [Backups](../../../netbird-server/README.md#backups). On the server VM you may run those commands yourself: they write to `~/netbird-backups/` without printing anything. Never open the files they produce.
 
 - Back up the database and `netbird.yaml` together. The rows are encrypted with `server.store_encryption_key`, so a dump without its config is unreadable.
-- Check the result by metadata only: `ls -l ~/netbird-backups/` shows today's files with non-zero sizes, and `gzip -t` on the dump exits 0.
+- Check the result without reading it: `zcat <dump> | grep -c 'CREATE TABLE'` prints a number well above zero. A failed `docker compose exec` still leaves a valid, tiny gzip file, so `ls -l` and `gzip -t` alone pass on an empty backup.
 - Remind the user to copy `~/netbird-backups/` off the host.
 
 ## Upgrades
@@ -27,13 +27,13 @@ Server first, then agents. An agent newer than its server is untested.
 1. Back up (above).
 2. Choose the target tags. After `git pull`, `netbird.example.yaml` holds the releases this repo is tested with; it has no secrets, so read its `images:` block and compare it with the current tags from `./deploy.py config`.
 3. Never move Postgres to a new major version: a new major cannot start on the old data directory.
-4. Change each tag in `netbird.yaml` with one targeted command (the example in [Secret files](../../../AGENTS.md#secret-files)), shown to the user first. Keep `netbird_server` and `dashboard` on the same NetBird release. Confirm with `./deploy.py config`.
+4. Change each tag in `netbird.yaml` with one targeted command, following the one-line check and the example in [Secret files](../../../AGENTS.md#secret-files), shown to the user first. `netbird_server` and `dashboard` are versioned separately (`0.77.0` and `v2.91.1`, for example), so move them together to the pair in `netbird.example.yaml`; never give the dashboard the server's tag. Confirm with `./deploy.py config`.
 5. Run `./deploy.py update`. It pulls, recreates only what changed and validates. Exit 0 is done; anything else goes to `netbird-troubleshoot`.
 6. Then upgrade each agent to the server's new release, as in [Upgrade](../../../netbird-agent/README.md#upgrade) and [Match the server version](../../../netbird-agent/README.md#match-the-server-version).
 
 ## Restore
 
-Follow the restore steps in [Backups](../../../netbird-server/README.md#backups). Ask before `docker compose down` and again before `docker volume rm`, which deletes the live database. The `netbird.yaml` in place must be the one saved with that dump, or at least hold the same `server.store_encryption_key`. Finish with `./deploy.py` and `./deploy.py validate`.
+Follow the restore steps in [Backups](../../../netbird-server/README.md#backups). Ask before `docker compose down` and again before `docker volume rm`, which deletes the live database. The `netbird.yaml` in place must be the one saved with that dump: the rows need its `server.store_encryption_key`, and the dump restores the database role with its `postgres.password`, so a newer password stops `netbird-server` from connecting. Finish with `./deploy.py` and `./deploy.py validate`.
 
 ## Rotating secrets
 

@@ -25,11 +25,14 @@ Read the code and its tests before changing either. Follow [CONTRIBUTING.md](../
 
 **A new `netbird.yaml` option** passes through these places in `netbird-server/`:
 
-1. `deploy.py`, `Config.__init__`: read it with `need("block.key", <default>)`. A default keeps every existing `netbird.yaml` working; without one, every current install fails with exit 2 after `git pull`.
-2. `template_vars()` for a value used in `template/*.tmpl`, or `env_file_vars()` only if `docker-compose.yml` interpolates it. Secrets also go in `secrets()`, so they are redacted and blank-checked.
-3. `netbird.example.yaml`: the key with a comment saying what it does, and its generator command if it is a secret.
-4. The server README section that covers it.
-5. Tests in `netbird-server/tests/`, with the fixture `tests/fixtures/netbird.test.yaml`. Note that `test_env_file_vars_keys` pins the exact `.env` keys.
+1. `deploy.py`, `Config.__init__`: read it with `need("block.key", <default>)`. Any default other than `None` keeps every existing `netbird.yaml` working; with no default the key is required, and every current install fails with exit 2 after `git pull`. A value with no sensible default is read with `raw.get()`, the way `oidc.redirect_uri` is.
+2. `template_vars()` for a value used in `template/*.tmpl`, or `env_file_vars()` only if `docker-compose.yml` interpolates it.
+3. A secret needs two more things:
+   - `./deploy.py config` hides values by variable name, in `_redact()`: names containing `secret`, `password`, `key` or `dsn`. Name the variable to match, or extend `_redact()` and `test_redact`; otherwise the "safe" config view prints it.
+   - `secrets()` makes a value required: empty, `replace_me` or unsafe characters stop `deploy.py` with exit 2. Add a required secret there, never an optional one.
+4. `netbird.example.yaml`: the key with a comment saying what it does, and its generator command if it is a secret.
+5. The server README section that covers it.
+6. Tests in `netbird-server/tests/`, with the fixture `tests/fixtures/netbird.test.yaml`. Note that `test_env_file_vars_keys` pins the exact `.env` keys.
 
 **A `deploy.py` bug fix** starts with a test that fails without the fix. Keep its message style: lowercase `error:` and `warn:`, and every failure says how to fix it.
 

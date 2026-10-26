@@ -2,6 +2,7 @@
 
 import os
 import re
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -228,3 +229,80 @@ def test_readme_lists_skill(name):
     readme = (REPO_ROOT / "README.md").read_text()
     section = readme.split("\n## Using an AI agent", 1)[1].split("\n## ", 1)[0]
     assert f"(.agents/skills/{name}/SKILL.md)" in section
+
+
+def section(text, heading):
+    return text.split(f"\n## {heading}", 1)[1].split("\n## ", 1)[0]
+
+
+SED_EXAMPLE = re.compile(r"`(sed -i '[^`]*' netbird\.yaml)`")
+
+
+def test_agents_md_sed_example_hits_one_line(tmp_path):
+    # Keys such as dex, client_id and client_secret appear twice in
+    # netbird.yaml; an edit must anchor on the current value to hit one line.
+    command = SED_EXAMPLE.search(AGENTS_MD.read_text()).group(1)
+    assert "\\).*|" not in command
+    example = REPO_ROOT / "netbird-server" / "netbird.example.yaml"
+    (tmp_path / "netbird.yaml").write_text(example.read_text())
+    subprocess.run(
+        ["bash", "-c", command.replace("<tag>", "v9.9.9")],
+        cwd=tmp_path,
+        check=True,
+    )
+    before = example.read_text().splitlines()
+    after = (tmp_path / "netbird.yaml").read_text().splitlines()
+    assert sum(a != b for a, b in zip(before, after, strict=True)) == 1
+    assert "grep -c '^  " in AGENTS_MD.read_text()
+
+
+def test_extend_explains_redaction_by_name():
+    text = skill_text("netbird-extend")
+    assert "_redact" in text
+    assert "raw.get" in text
+
+
+def test_agents_md_offers_read_only_placeholder_check():
+    secrets = section(AGENTS_MD.read_text(), "Secret files")
+    assert "grep -c replace_me" in secrets
+
+
+def test_where_am_i_needs_a_service_signal_and_confirmation():
+    where = section(AGENTS_MD.read_text(), "Where am I?")
+    assert "systemctl is-active netbird" in where
+    assert "confirm" in where
+
+
+def test_agents_md_names_indirect_secret_reads():
+    secrets = section(AGENTS_MD.read_text(), "Secret files")
+    for needle in ("grep -r", "printenv", "git grep", "openssl rand"):
+        assert needle in secrets
+
+
+def test_maintain_upgrades_dashboard_to_its_own_tag():
+    upgrades = section(skill_text("netbird-maintain"), "Upgrades")
+    assert "same NetBird release" not in upgrades
+    assert "netbird.example.yaml" in upgrades
+
+
+def test_maintain_restore_needs_matching_password():
+    assert "postgres.password" in section(skill_text("netbird-maintain"), "Restore")
+
+
+def test_maintain_backup_check_catches_empty_dump():
+    assert "CREATE TABLE" in section(skill_text("netbird-maintain"), "Backups")
+
+
+def test_troubleshoot_reads_template_not_rendered_config():
+    assert "template/config.yaml.tmpl" in skill_text("netbird-troubleshoot")
+
+
+def test_install_server_gates_accept_healthy_setups():
+    text = skill_text("netbird-install-server")
+    assert "every check prints `ok`" not in text
+    assert "inactive" in text
+
+
+def test_agents_md_local_auth_needs_proven_sso():
+    confirm = section(AGENTS_MD.read_text(), "Confirm or refuse")
+    assert "#prove-it-works" in confirm

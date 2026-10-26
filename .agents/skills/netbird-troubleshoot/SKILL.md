@@ -13,7 +13,7 @@ Collect evidence before proposing a fix. Read each output in full, and never gue
 
 From `netbird-server/` on the server VM, in this order:
 
-1. `./deploy.py validate`. Exit 0 is healthy, 2 is bad config (nothing touched), 4 is a failed check. Every failed check prints its own fix: try that first.
+1. `./deploy.py validate`. Exit 0 is healthy, 2 is bad config (nothing touched), 4 is a failed check. Every failed check prints its own fix: try that first, unless it means opening a generated file. For example, the `stun` hint points at `stunPorts` in `config.yaml`; read it in `template/config.yaml.tmpl` instead, which holds no secrets.
 2. `./deploy.py validate --only <check>` re-runs one check. The report prints ids with dashes (`oidc-netbird`); `--only` takes the underscore form (`oidc_netbird`).
 3. `./deploy.py status` and `docker compose ps`: which containers run, restart or exited.
 4. `docker compose logs --tail=100 <service>` for the service the failure points at: `traefik`, `netbird-server`, `dashboard`, `dex` or `postgres`.
