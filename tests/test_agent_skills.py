@@ -221,3 +221,10 @@ def test_extend_explains_both_paths():
         "pull_request_template.md",
     ):
         assert needle in text
+
+
+@pytest.mark.parametrize("name", SKILLS)
+def test_readme_lists_skill(name):
+    readme = (REPO_ROOT / "README.md").read_text()
+    section = readme.split("\n## Using an AI agent", 1)[1].split("\n## ", 1)[0]
+    assert f"(.agents/skills/{name}/SKILL.md)" in section

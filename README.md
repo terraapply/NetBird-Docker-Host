@@ -56,6 +56,22 @@ Server VM:
 2. Log in to the NetBird dashboard and create a setup key: see [Setup keys](netbird-agent/README.md#setup-keys).
 3. Install the agent on each VM that should join the network: see [`netbird-agent/README.md`](netbird-agent/README.md).
 
+## Using an AI agent
+
+This repository ships instructions for coding agents. [`AGENTS.md`](AGENTS.md) holds the rules every agent loads, and five skills cover the common jobs. They work in Claude Code, OpenCode, Codex and any other agent that reads `AGENTS.md`.
+
+| Skill | Use it to |
+|---|---|
+| [netbird-install-server](.agents/skills/netbird-install-server/SKILL.md) | Set up the server on a new VM, up to the first login |
+| [netbird-install-agent](.agents/skills/netbird-install-agent/SKILL.md) | Join a VM to the network, with Docker or natively |
+| [netbird-maintain](.agents/skills/netbird-maintain/SKILL.md) | Back up, restore, upgrade, rotate secrets, re-key or remove agents |
+| [netbird-troubleshoot](.agents/skills/netbird-troubleshoot/SKILL.md) | Find and fix a problem on the server or an agent VM |
+| [netbird-extend](.agents/skills/netbird-extend/SKILL.md) | Add or change a feature, in the repository or in one deployment |
+
+Start your agent inside a clone of this repository, on a laptop or on a VM. A VM with the native agent install has no clone; drive it from a clone elsewhere, where the agent hands you the commands to run, or clone the repository there.
+
+Agents are told never to open `netbird.yaml`, the generated configs, setup keys or backups, because whatever an agent reads is sent to its AI provider. Do not paste secrets into the chat either.
+
 ## License
 
 [MIT](LICENSE)
