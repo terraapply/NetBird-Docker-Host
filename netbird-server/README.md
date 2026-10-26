@@ -262,7 +262,8 @@ Optionally register the post-logout URL
    netbird status        # Management: Connected / Signal: Connected
    ```
 
-   The peer appears under **Peers**.
+   The peer appears under **Peers**. To join VMs for real, with Docker or the
+   native package and a setup key, see [`../netbird-agent/README.md`](../netbird-agent/README.md).
 
 ---
 

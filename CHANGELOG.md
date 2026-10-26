@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- NetBird agent install for Linux VMs, with Docker (`netbird-agent/docker/`) or the native package; the setup key is read from a file in both.
+- A test that every relative link and anchor in the docs resolves.
+
 ## [0.1.0] - 2026-10-24
 
 ### Added

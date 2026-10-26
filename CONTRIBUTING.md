@@ -26,7 +26,7 @@ Run these before opening a pull request. CI runs the same ones.
 shellcheck $(git ls-files '*.sh')
 ```
 
-The tests need no network and no running stack. One test runs `docker compose config` and skips itself when Docker is not installed.
+The tests need no network and no running stack. The tests that run `docker compose config` skip themselves when Docker is not installed.
 
 ## Pull requests
 
