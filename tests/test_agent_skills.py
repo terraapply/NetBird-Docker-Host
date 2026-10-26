@@ -23,6 +23,7 @@ SKILLS = (
     "netbird-install-server",
     "netbird-install-agent",
     "netbird-maintain",
+    "netbird-troubleshoot",
 )
 
 # Files an agent never opens: whatever it reads is sent to the AI provider.
@@ -38,6 +39,7 @@ SECRET_PATHS = (
 
 SETUP_KEY_ON_CLI = re.compile(r"--setup-key[\s=]|NB_SETUP_KEY=")
 README_LINK = re.compile(r"\]\([^)]*README\.md")
+CHECK_ROW = re.compile(r'^\s+\("(\w+)", (check_\w+),', re.M)
 
 
 def skill_text(name):
@@ -188,4 +190,21 @@ def test_maintain_edits_without_opening_config():
         "#backups",
         "#match-the-server-version",
     ):
+        assert needle in text
+
+
+def test_troubleshoot_covers_every_check():
+    # A check added to deploy.py must show up in the skill's check table.
+    deploy = (REPO_ROOT / "netbird-server" / "deploy.py").read_text()
+    checks = CHECK_ROW.findall(deploy)
+    assert len(checks) >= 9
+    text = skill_text("netbird-troubleshoot")
+    for cid, fn in checks:
+        assert f"`{cid}`" in text
+        assert f"`{fn}`" in text
+
+
+def test_troubleshoot_reports_and_learns():
+    text = skill_text("netbird-troubleshoot")
+    for needle in ("bug_report.yml", "#learning-loop", "--only", "/dev/net/tun"):
         assert needle in text
