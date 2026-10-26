@@ -1,6 +1,9 @@
 # Local planning artifacts, never committed
 .docs/
 
+# Secrets, never committed
+.env
+
 # Python
 __pycache__/
 *.py[cod]

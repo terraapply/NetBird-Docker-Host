@@ -53,7 +53,7 @@ Server VM:
 ## Quick start
 
 1. Deploy the server on a VM: see [`netbird-server/README.md`](netbird-server/README.md).
-2. Log in to the NetBird dashboard and create a setup key.
+2. Log in to the NetBird dashboard and create a setup key: see [Setup keys](netbird-agent/README.md#setup-keys).
 3. Install the agent on each VM that should join the network: see [`netbird-agent/README.md`](netbird-agent/README.md).
 
 ## License

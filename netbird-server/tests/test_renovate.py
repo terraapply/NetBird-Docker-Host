@@ -44,7 +44,7 @@ def test_renovate_blocks_postgres_major():
 
 
 def test_renovate_groups_netbird():
-    wanted = {"netbirdio/netbird-server", "netbirdio/dashboard"}
+    wanted = {"netbirdio/netbird-server", "netbirdio/dashboard", "netbirdio/netbird"}
     assert any(
         wanted <= set(r.get("matchPackageNames", [])) and r.get("groupName")
         for r in load_renovate()["packageRules"]

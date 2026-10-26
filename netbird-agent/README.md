@@ -1,33 +1,144 @@
 # netbird-agent
 
-Standalone NetBird agent for a VM. It is installed separately from the server and joins the network managed by [`../netbird-server`](../netbird-server/README.md).
+Joins a Linux VM to the NetBird network run by [`../netbird-server`](../netbird-server/README.md), as a peer.
 
-Two install methods are supported. Pick one per VM.
+There are two install methods: [Docker](#option-a-docker) or the [native package](#option-b-native). Use **one method per VM**: two NetBird clients on one VM fight over the same WireGuard interface.
+
+Both methods end the same way: `netbird status` shows Management and Signal connected, and the VM appears in the dashboard under **Peers**.
 
 ## Requirements
 
-- TODO: supported operating systems
-- TODO: network access to the server
-- TODO: Docker version (Option A only)
+- Ubuntu 22.04/24.04 or Debian 12.
+- Outbound `443/tcp` and `3478/udp` to the NetBird server. No inbound ports: peers find each other through NAT, and traffic falls back to the relay on the server when a direct path is blocked.
+- The management URL: the address you open the dashboard at, for example `https://netbird.example.com`.
+- A setup key, see [Setup keys](#setup-keys).
+- Option A: Docker Engine with the Compose v2 plugin, and `git`.
+- Option B: `sudo` and `curl`.
 
-## Joining the network
+## Setup keys
 
-Both methods need a setup key created in the NetBird dashboard and the URL of your management server.
+Create one in the dashboard under **Setup Keys**:
 
-TODO: where to find the setup key and management URL.
+- **One-off**: registers a single peer, then it is spent. Use it for one VM.
+- **Reusable**: registers any number of peers until it expires. Revoke it in the dashboard once your VMs have joined.
+
+Give it a short expiry either way. A setup key is a secret: anyone holding a valid one can join your network.
+
+Both methods read the key from a file only you can read, never from the command line, so it does not end up in shell history, `ps` output or `docker inspect`. This writes the file from a hidden prompt (bash):
+
+```bash
+install -m 600 /dev/null setup-key && read -rsp 'Setup key: ' key && printf '%s' "$key" > setup-key && unset key && echo
+```
+
+Paste the key at the prompt; nothing is echoed.
 
 ## Option A: Docker
 
-TODO: run the agent as a Docker container.
+Runs the official `netbirdio/netbird` client image with host networking, so the WireGuard interface lives on the VM and other peers reach the VM itself, not only the container.
+
+```bash
+git clone https://github.com/terraapply/NetBird-Docker-Host.git
+cd NetBird-Docker-Host/netbird-agent/docker
+cp .env.example .env
+chmod 600 .env
+nano .env                  # set NB_MANAGEMENT_URL, optionally NB_HOSTNAME
+```
+
+Write `setup-key` next to `docker-compose.yml` with the hidden prompt:
+
+```bash
+install -m 600 /dev/null setup-key && read -rsp 'Setup key: ' key && printf '%s' "$key" > setup-key && unset key && echo
+```
+
+Start it and watch it register:
+
+```bash
+docker compose up -d
+docker compose logs -f     # Ctrl+C to stop following
+```
+
+Keep `setup-key` in place. Compose mounts it on every start and fails without it. A spent one-off key does no harm there: the registration lives in the `state` volume, so restarts and reboots reconnect without a new key.
+
+`.env` and `setup-key` are gitignored.
 
 ## Option B: Native
 
-TODO: install the agent directly on the VM.
+Installs the NetBird package and its system service with the official installer, then registers with the key file:
+
+```bash
+curl -fsSL https://pkgs.netbird.io/install.sh | sh
+install -m 600 /dev/null ~/netbird-setup-key && read -rsp 'Setup key: ' key && printf '%s' "$key" > ~/netbird-setup-key && unset key && echo
+sudo netbird up --management-url https://netbird.example.com --setup-key-file ~/netbird-setup-key
+shred -u ~/netbird-setup-key
+```
+
+Replace `https://netbird.example.com` with your management URL. Add `--hostname <name>` to the `netbird up` line to choose the peer name; the default is the VM hostname.
+
+The key file can go once `netbird up` succeeds: the registration is stored under `/var/lib/netbird`, and the service reconnects on its own after a reboot.
 
 ## Verify
 
-TODO: how to check that the agent is connected.
+Docker, from `netbird-agent/docker`:
+
+```bash
+docker compose exec netbird netbird status
+```
+
+Native:
+
+```bash
+netbird status
+```
+
+Expect `Management: Connected` and `Signal: Connected`. Then:
+
+- The VM appears in the dashboard under **Peers**.
+- Another peer answers a ping on its NetBird IP (`netbird status` prints this VM's own `NetBird IP`; the dashboard lists the others).
+
+## Upgrade
+
+Docker: the image tag is pinned in `docker-compose.yml` and kept current in this repository, so pull the repository first:
+
+```bash
+git pull
+docker compose pull
+docker compose up -d
+```
+
+Native:
+
+```bash
+sudo apt-get update
+sudo apt-get install --only-upgrade netbird
+```
 
 ## Uninstall
 
-TODO: remove the agent for each install method.
+Docker, from `netbird-agent/docker`:
+
+```bash
+docker compose down -v     # -v also deletes the state volume (the registration)
+rm -f .env
+shred -u setup-key
+```
+
+Native:
+
+```bash
+sudo netbird down
+sudo netbird service stop
+sudo netbird service uninstall
+sudo apt-get remove netbird
+sudo rm -rf /var/lib/netbird
+```
+
+Both: delete the peer in the dashboard under **Peers**.
+
+## Troubleshooting
+
+| Symptom | Cause and fix |
+|---|---|
+| `Management: Disconnected` or stuck connecting | Wrong management URL, or `443/tcp` to the server is blocked. From the VM run `curl -I https://netbird.example.com` with your URL; it must answer. Docker: check `NB_MANAGEMENT_URL` in `.env`, then `docker compose up -d`. |
+| `docker compose up` fails with `bind source path does not exist: .../setup-key` | The `setup-key` file is missing. Write it with the hidden prompt, then `docker compose up -d`. |
+| Setup key rejected in the logs | The key expired, was revoked, or is a one-off key already spent on another peer. Create a new key, write it to the key file again, then run `docker compose up -d --force-recreate` (Docker) or `netbird up` again (native). |
+| Container exits at once or keeps restarting | Read `docker compose logs netbird`. Check that `setup-key` exists and is not empty, and that the VM has `/dev/net/tun`. |
