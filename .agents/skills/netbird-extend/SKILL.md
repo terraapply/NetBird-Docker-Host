@@ -11,7 +11,7 @@ First ask: should this change **the repo** (code, tests and docs, ready for a pu
 
 ## Path A: only this deployment
 
-1. Check whether `netbird.yaml` already supports it: read `netbird.example.yaml` (no secrets) and the [server README](../../../netbird-server/README.md).
+1. Check whether `netbird.yaml` already supports it: read `netbird.example.yaml` (no secrets), the root [README](../../../README.md) and the [server README](../../../netbird-server/README.md).
 2. If it does, change that one key with a targeted command shown to the user first (or let the user type it, if it is a secret), confirm with `./deploy.py config`, then run `./deploy.py`.
 3. If it does not, explain the limits before touching anything:
    - `deploy.py` always runs Compose with `-f docker-compose.yml`, so a `docker-compose.override.yml` is ignored.
@@ -31,7 +31,7 @@ Read the code and its tests before changing either. Follow [CONTRIBUTING.md](../
    - `./deploy.py config` hides values by variable name, in `_redact()`: names containing `secret`, `password`, `key` or `dsn`. Name the variable to match, or extend `_redact()` and `test_redact`; otherwise the "safe" config view prints it.
    - `secrets()` makes a value required: empty, `replace_me` or unsafe characters stop `deploy.py` with exit 2. Add a required secret there, never an optional one.
 4. `netbird.example.yaml`: the key with a comment saying what it does, and its generator command if it is a secret.
-5. The server README section that covers it.
+5. The README section that covers it: the root [README](../../../README.md) for install steps and everyday commands, the [server README](../../../netbird-server/README.md) for how it works and day-2 operations.
 6. Tests in `netbird-server/tests/`, with the fixture `tests/fixtures/netbird.test.yaml`. Note that `test_env_file_vars_keys` pins the exact `.env` keys.
 
 **A `deploy.py` bug fix** starts with a test that fails without the fix. Keep its message style: lowercase `error:` and `warn:`, and every failure says how to fix it.

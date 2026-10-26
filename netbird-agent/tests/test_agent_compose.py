@@ -144,3 +144,9 @@ def test_client_matches_server_release():
     example = DOCKER_DIR.parents[1] / "netbird-server" / "netbird.example.yaml"
     server = yaml.safe_load(example.read_text())["images"]["netbird_server"]
     assert service()["image"].rsplit(":", 1)[1] == server.rsplit(":", 1)[1]
+
+
+def test_compose_comment_points_at_root_readme():
+    line = (DOCKER_DIR / "docker-compose.yml").read_text().splitlines()[2]
+    assert "../../README.md" in line
+    assert "Join agents" in line

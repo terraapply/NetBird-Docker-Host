@@ -29,7 +29,7 @@ Server first, then agents. An agent newer than its server is untested.
 3. Never move Postgres to a new major version: a new major cannot start on the old data directory.
 4. Change each tag in `netbird.yaml` with one targeted command, following the one-line check and the example in [Secret files](../../../AGENTS.md#secret-files), shown to the user first. `netbird_server` and `dashboard` are versioned separately (`0.77.0` and `v2.91.1`, for example), so move them together to the pair in `netbird.example.yaml`; never give the dashboard the server's tag. Confirm with `./deploy.py config`.
 5. Run `./deploy.py update`. It pulls, recreates only what changed and validates. Exit 0 is done; anything else goes to `netbird-troubleshoot`.
-6. Then upgrade each agent to the server's new release, as in [Upgrade](../../../netbird-agent/README.md#upgrade) and [Match the server version](../../../netbird-agent/README.md#match-the-server-version).
+6. Then upgrade each agent to the server's new release, as in [Upgrade](../../../netbird-agent/README.md#upgrade) and [Match the server version](../../../README.md#match-the-server-version).
 
 ## Restore
 

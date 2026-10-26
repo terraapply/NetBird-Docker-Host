@@ -21,7 +21,9 @@ def example_images():
 
 def test_renovate_regex_finds_all_images():
     managers = [
-        m for m in load_renovate()["customManagers"] if m["customType"] == "regex"
+        m
+        for m in load_renovate()["customManagers"]
+        if any("netbird\\.example\\.yaml" in p for p in m["managerFilePatterns"])
     ]
     assert len(managers) == 1
     text = EXAMPLE.read_text()
@@ -67,3 +69,25 @@ def test_renovate_groups_lint_tools_with_their_hooks():
             pair <= set(r.get("matchPackageNames", [])) and r.get("groupName")
             for r in rules
         ), pair
+
+
+def test_renovate_bumps_readme_badge_with_netbird():
+    # The README badge is the one place the docs state a version; it must move
+    # in the same Renovate PR as the images.
+    managers = [
+        m
+        for m in load_renovate()["customManagers"]
+        if any("README" in p for p in m["managerFilePatterns"])
+    ]
+    assert len(managers) == 1
+    manager = managers[0]
+    assert manager["depNameTemplate"] == "netbirdio/netbird-server"
+    text = (SERVER_DIR.parent / "README.md").read_text()
+    found = [
+        hit.group("currentValue")
+        for pattern in manager["matchStrings"]
+        for hit in re.finditer(pattern.replace("(?<", "(?P<"), text)
+    ]
+    tag = yaml.safe_load(EXAMPLE.read_text())["images"]["netbird_server"]
+    version = tag.rsplit(":", 1)[1]
+    assert found == [version, version]
