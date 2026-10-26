@@ -7,17 +7,17 @@ description: Install the self-hosted NetBird server from this repo on a fresh Li
 
 Before anything else, apply [Where am I?](../../../AGENTS.md#where-am-i) and [Secret files](../../../AGENTS.md#secret-files) from `AGENTS.md`. On a laptop, every command below goes to the user as a short block, and you read what they paste back.
 
-The procedure is the [Quick start](../../../netbird-server/README.md#quick-start) in the server README. Follow it in order and link the user to each section. Do not move on until the evidence for the current step is in; "done" from the user is not evidence.
+The procedure is [Deploy the server](../../../README.md#deploy-the-server) in the root README, with its [Requirements](../../../README.md#requirements) first. Follow it in order and link the user to each section. Do not move on until the evidence for the current step is in; "done" from the user is not evidence.
 
 | Step | README section | Evidence before moving on |
 |---|---|---|
-| 1. VM | [VM](../../../netbird-server/README.md#vm) | `docker compose version` prints v2.x, `python3 -c 'import yaml'` exits 0, `free -m` shows at least 1.5 GB (with swap below 4 GB) |
-| 2. Ports | [Inbound ports](../../../netbird-server/README.md#inbound-ports) | `sudo ufw status` lists 80/tcp, 443/tcp and 3478/udp, or reports `inactive` (common on cloud VMs, where the security group is the firewall); the user confirms the cloud security group or router, which you cannot see |
-| 3. DNS | [DNS](../../../netbird-server/README.md#dns) | `dig +short` for both names returns the VM's public IP. Any other address means a proxied record or a typo. |
-| 4. GitHub OAuth App | [GitHub OAuth App](../../../netbird-server/README.md#github-oauth-app) | Created under the organisation, callback exactly `https://<dex domain>/callback`, user holds the client ID and secret. Ask whether the org restricts OAuth Apps; if so an owner must approve it. |
-| 5. `netbird.yaml` | [Fill in netbird.yaml](../../../netbird-server/README.md#fill-in-netbirdyaml) | See below |
-| 6. Run | [Run it](../../../netbird-server/README.md#run-it) | `./deploy.py` exits 0. A `warn` on `stun` with a hint about NAT hairpinning still exits 0: the router cannot loop back, external clients are fine. |
-| 7. First login | [After the first run](../../../netbird-server/README.md#after-the-first-run), [Prove it works](../../../netbird-server/README.md#prove-it-works) | The user confirms each of the three setup steps and the four manual checks, including that a non-member is refused |
+| 1. VM | [Server VM](../../../README.md#server-vm) | `docker compose version` prints v2.x, `python3 -c 'import yaml'` exits 0, `free -m` shows at least 1.5 GB (with swap below 4 GB) |
+| 2. Ports | [Inbound ports](../../../README.md#inbound-ports) | `sudo ufw status` lists 80/tcp, 443/tcp and 3478/udp, or reports `inactive` (common on cloud VMs, where the security group is the firewall); the user confirms the cloud security group or router, which you cannot see |
+| 3. DNS | [DNS](../../../README.md#dns) | `dig +short` for both names returns the VM's public IP. Any other address means a proxied record or a typo. |
+| 4. GitHub OAuth App | [GitHub OAuth App](../../../README.md#github-oauth-app) | Created under the organisation, callback exactly `https://<dex domain>/callback`, user holds the client ID and secret. Ask whether the org restricts OAuth Apps; if so an owner must approve it. |
+| 5. `netbird.yaml` | [Fill in netbird.yaml](../../../README.md#fill-in-netbirdyaml) | See below |
+| 6. Run | [Run it](../../../README.md#run-it) | `./deploy.py` exits 0. A `warn` on `stun` with a hint about NAT hairpinning still exits 0: the router cannot loop back, external clients are fine. |
+| 7. First login | [After the first run](../../../README.md#after-the-first-run), [Prove it works](../../../README.md#prove-it-works) | The user confirms each of the three setup steps and the four manual checks, including that a non-member is refused |
 
 ## Filling in netbird.yaml without opening it
 
@@ -52,6 +52,6 @@ The first run waits 30 to 60 seconds for certificates. If `tls` or either issuer
 
 ## After the first run
 
-Step 2 of [After the first run](../../../netbird-server/README.md#after-the-first-run) needs `oidc.client_secret` in the dashboard. The user copies it from `netbird.yaml` themselves; do not read it for them.
+Step 2 of [After the first run](../../../README.md#after-the-first-run) needs `oidc.client_secret` in the dashboard. The user copies it from `netbird.yaml` themselves; do not read it for them.
 
 When all seven steps have their evidence, the server is done. To join VMs as peers, switch to the `netbird-install-agent` skill.

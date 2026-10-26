@@ -77,7 +77,7 @@ Ask, and wait for a yes, before:
 - `docker compose down -v` or `docker volume rm` (deletes the database or a peer registration)
 - restoring a database backup
 - `shred` of a setup-key file
-- setting `server.local_auth: false`, and only once every check in [Prove it works](netbird-server/README.md#prove-it-works) has passed: GitHub becomes the only way in
+- setting `server.local_auth: false`, and only once every check in [Prove it works](README.md#prove-it-works) has passed: GitHub becomes the only way in
 - rotating any secret
 - deleting a peer in the dashboard
 - `git push`

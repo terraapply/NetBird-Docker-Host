@@ -163,3 +163,49 @@ def test_readme_badges_use_one_style():
     urls = re.findall(r"https://img\.shields\.io/[^)\s]+", ROOT_README.read_text())
     assert len(urls) >= 10
     assert all("style=flat-square" in u for u in urls)
+
+
+def test_readme_has_server_install():
+    text = ROOT_README.read_text()
+    for heading in (
+        "## Requirements",
+        "### Server VM",
+        "### Inbound ports",
+        "### DNS",
+        "### GitHub OAuth App",
+        "## Deploy the server",
+        "### Fill in netbird.yaml",
+        "### Run it",
+        "### After the first run",
+        "### Prove it works",
+        "## Operate",
+        "### Everyday commands",
+        "### Exit codes",
+        "### Common tasks",
+    ):
+        assert f"\n{heading}\n" in text, heading
+
+
+def test_server_readme_has_no_install_steps():
+    text = SERVER_README.read_text()
+    for heading in (
+        "## Quick start",
+        "## Before you start",
+        "## Install",
+        "## Everyday commands",
+    ):
+        assert f"\n{heading}\n" not in text, heading
+    assert "../README.md#deploy-the-server" in text
+    assert "../README.md#operate" in text
+
+
+def test_readme_deploy_commands_follow_cd():
+    # A copied block must not run ./deploy.py from the wrong directory.
+    blocks = re.findall(
+        r"```bash\n(.*?)```", doc_section(ROOT_README, "## Deploy the server"), re.S
+    )
+    first_cd = next(
+        i for i, b in enumerate(blocks) if "cd NetBird-Docker-Host/netbird-server" in b
+    )
+    first_run = next(i for i, b in enumerate(blocks) if "./deploy.py" in b)
+    assert first_cd < first_run
