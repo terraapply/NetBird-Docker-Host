@@ -92,3 +92,11 @@ def test_agent_readme_never_puts_setup_key_on_command_line():
         if re.search(r"--setup-key[\s=]|NB_SETUP_KEY=", line)
     ]
     assert bad == []
+
+
+def test_agent_readme_rekey_steps_are_runnable():
+    # A bare `netbird up` skips sudo, the management URL and the key file,
+    # and starts the SSO login instead of using the new key.
+    trouble = AGENT_README.read_text().split("\n## Troubleshooting", 1)[1]
+    assert "`netbird up`" not in trouble
+    assert "(#option-b-native)" in trouble
