@@ -1,0 +1,32 @@
+# NetBird agent (client) joining this VM to a self-hosted NetBird network.
+# Needs .env (copy .env.example) and a 0600 setup-key file next to this file.
+# Setup, upgrade and uninstall: ../README.md, "Option A: Docker".
+name: netbird-agent
+
+services:
+  netbird:
+    image: netbirdio/netbird:0.81.4
+    container_name: netbird-agent
+    restart: unless-stopped
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+      - SYS_RESOURCE
+    devices:
+      - /dev/net/tun
+    environment:
+      NB_MANAGEMENT_URL: ${NB_MANAGEMENT_URL:?set NB_MANAGEMENT_URL in .env}
+      NB_HOSTNAME: ${NB_HOSTNAME:-}
+      NB_SETUP_KEY_FILE: /run/secrets/netbird_setup_key
+    secrets:
+      - netbird_setup_key
+    volumes:
+      - state:/var/lib/netbird
+
+secrets:
+  netbird_setup_key:
+    file: ./setup-key
+
+volumes:
+  state:

@@ -28,10 +28,11 @@
       "enabled": false
     },
     {
-      "description": "NetBird server and dashboard are upgraded together",
+      "description": "NetBird server, dashboard and client are upgraded together",
       "matchPackageNames": [
         "netbirdio/netbird-server",
-        "netbirdio/dashboard"
+        "netbirdio/dashboard",
+        "netbirdio/netbird"
       ],
       "groupName": "netbird"
     },
