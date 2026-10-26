@@ -136,3 +136,11 @@ def test_compose_from_other_cwd_resolves_secret(tmp_path):
     assert result.returncode == 0, result.stderr
     config = json.loads(result.stdout)
     assert config["secrets"]["netbird_setup_key"]["file"] == str(target / "setup-key")
+
+
+def test_client_matches_server_release():
+    # Client and server ship from one NetBird release; the Renovate netbird
+    # group then moves them together.
+    example = DOCKER_DIR.parents[1] / "netbird-server" / "netbird.example.yaml"
+    server = yaml.safe_load(example.read_text())["images"]["netbird_server"]
+    assert service()["image"].rsplit(":", 1)[1] == server.rsplit(":", 1)[1]

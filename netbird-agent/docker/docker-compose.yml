@@ -5,7 +5,7 @@ name: netbird-agent
 
 services:
   netbird:
-    image: netbirdio/netbird:0.81.4
+    image: netbirdio/netbird:0.77.0
     container_name: netbird-agent
     restart: unless-stopped
     network_mode: host
