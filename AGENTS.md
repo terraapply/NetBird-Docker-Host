@@ -117,3 +117,4 @@ Each job has a skill in `.agents/skills/`. Load the one that fits before you sta
 | [netbird-install-agent](.agents/skills/netbird-install-agent/SKILL.md) | Joining a VM to the network as a peer, with Docker or natively |
 | [netbird-maintain](.agents/skills/netbird-maintain/SKILL.md) | Health checks, backups, restore, upgrades, secret rotation, re-keying or removing agents |
 | [netbird-troubleshoot](.agents/skills/netbird-troubleshoot/SKILL.md) | Something is broken on the server or an agent VM: failed checks, login, certificates, peers |
+| [netbird-extend](.agents/skills/netbird-extend/SKILL.md) | Adding or changing a feature, in the repo or in one deployment |

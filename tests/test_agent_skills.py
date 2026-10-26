@@ -24,6 +24,7 @@ SKILLS = (
     "netbird-install-agent",
     "netbird-maintain",
     "netbird-troubleshoot",
+    "netbird-extend",
 )
 
 # Files an agent never opens: whatever it reads is sent to the AI provider.
@@ -207,4 +208,16 @@ def test_troubleshoot_covers_every_check():
 def test_troubleshoot_reports_and_learns():
     text = skill_text("netbird-troubleshoot")
     for needle in ("bug_report.yml", "#learning-loop", "--only", "/dev/net/tun"):
+        assert needle in text
+
+
+def test_extend_explains_both_paths():
+    text = skill_text("netbird-extend")
+    for needle in (
+        "-f docker-compose.yml",
+        "git pull",
+        "netbird.example.yaml",
+        "CHANGELOG.md",
+        "pull_request_template.md",
+    ):
         assert needle in text
