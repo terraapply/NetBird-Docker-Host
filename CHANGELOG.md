@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - NetBird agent install for Linux VMs, with Docker (`netbird-agent/docker/`) or the native package; the setup key is read from a file in both.
 - A test that every relative link and anchor in the docs resolves.
+- Instructions for coding agents (Claude Code, OpenCode, Codex and others): `AGENTS.md` with the rules, plus skills to install the server and agents, maintain, troubleshoot and extend the stack. Agents are told never to open files that hold secrets.
+- "Match the server version" in the agent README: pin a native agent to the server's NetBird release, since the installer always fetches the latest client.
 
 ## [0.1.0] - 2026-10-24
 

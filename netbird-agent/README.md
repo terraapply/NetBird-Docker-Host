@@ -76,6 +76,32 @@ Replace `https://netbird.example.com` with your management URL. Add `--hostname 
 
 The key file can go once `netbird up` succeeds: the registration is stored under `/var/lib/netbird`, and the service reconnects on its own after a reboot.
 
+The installer always fetches the latest client. If your server runs an older release, pin it next: see [Match the server version](#match-the-server-version).
+
+## Match the server version
+
+Run the same NetBird release on the agents as on the server. An agent newer than its server is untested, and both install methods can end up newer: the native installer takes the latest release, and `git pull` moves the Docker pin to the release this repository tests.
+
+Find the server's release on the server VM, from `netbird-server`:
+
+```bash
+./deploy.py config | grep NETBIRD_SERVER_IMAGE   # the tag after the colon, for example 0.77.0
+```
+
+If you do not run the server, ask whoever does.
+
+Docker: compare it with the `image:` line in `docker/docker-compose.yml`. If the agent's pin is newer, [upgrade the server](../netbird-server/README.md#upgrades) to that release first.
+
+Native: install the server's release and hold it, so a routine `apt upgrade` does not move it past the server:
+
+```bash
+sudo apt-get install --allow-downgrades netbird=0.77.0   # the server's release
+sudo apt-mark hold netbird
+netbird version
+```
+
+`apt-cache madison netbird` lists every release in the repository. The package restarts the service itself, and the registration survives the change.
+
 ## Verify
 
 Docker, from `netbird-agent/docker`:
@@ -107,11 +133,13 @@ docker compose pull
 docker compose up -d
 ```
 
-Native:
+Native, to the server's new release (see [Match the server version](#match-the-server-version)):
 
 ```bash
 sudo apt-get update
-sudo apt-get install --only-upgrade netbird
+sudo apt-mark unhold netbird
+sudo apt-get install netbird=0.78.0   # the server's new release
+sudo apt-mark hold netbird
 ```
 
 ## Uninstall
@@ -130,6 +158,7 @@ Native:
 sudo netbird down
 sudo netbird service stop
 sudo netbird service uninstall
+sudo apt-mark unhold netbird
 sudo apt-get remove netbird
 sudo rm -rf /var/lib/netbird
 ```

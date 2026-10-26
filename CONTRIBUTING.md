@@ -36,6 +36,12 @@ The tests need no network and no running stack. The tests that run `docker compo
 - Bug fixes in `deploy.py` come with a test that fails without the fix.
 - Keep the style of `deploy.py`: lowercase `error:` and `warn:` messages, and every failure prints how to fix it.
 
+## Agent docs
+
+[`AGENTS.md`](AGENTS.md) and the skills in `.agents/skills/` tell coding agents how to work with this repo. They link to the READMEs and never copy them, so when a procedure changes, update the README first and the matching skill or `AGENTS.md` second.
+
+A new skill needs its folder in `.agents/skills/`, a symlink to it in `.claude/skills/`, a row in the `AGENTS.md` skill table, a line in the README's "Using an AI agent" table, and its name in `SKILLS` in `tests/test_agent_skills.py`.
+
 ## Never commit
 
 - `netbird-server/netbird.yaml` or anything `deploy.py` generates (`config.yaml`, `dex/config.yaml`, `.env`).
