@@ -114,3 +114,4 @@ Each job has a skill in `.agents/skills/`. Load the one that fits before you sta
 | Skill | Use it when |
 |---|---|
 | [netbird-install-server](.agents/skills/netbird-install-server/SKILL.md) | Setting up the NetBird server on a new VM, up to the first login |
+| [netbird-install-agent](.agents/skills/netbird-install-agent/SKILL.md) | Joining a VM to the network as a peer, with Docker or natively |

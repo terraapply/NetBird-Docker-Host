@@ -19,7 +19,7 @@ READMES = (
     REPO_ROOT / "netbird-agent" / "README.md",
 )
 
-SKILLS = ("netbird-install-server",)
+SKILLS = ("netbird-install-server", "netbird-install-agent")
 
 # Files an agent never opens: whatever it reads is sent to the AI provider.
 SECRET_PATHS = (
@@ -161,4 +161,10 @@ def test_install_server_checks_without_opening_config():
         "openssl rand -base64 32",
         "netbird-install-agent",
     ):
+        assert needle in text
+
+
+def test_install_agent_enforces_one_method_and_version():
+    text = skill_text("netbird-install-agent")
+    for needle in ("one method per VM", "#match-the-server-version", "curl -I"):
         assert needle in text

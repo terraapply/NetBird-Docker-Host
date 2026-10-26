@@ -100,3 +100,17 @@ def test_agent_readme_rekey_steps_are_runnable():
     trouble = AGENT_README.read_text().split("\n## Troubleshooting", 1)[1]
     assert "`netbird up`" not in trouble
     assert "(#option-b-native)" in trouble
+
+
+def test_agent_readme_has_match_server_version():
+    # The install script and apt install the latest client, which can be newer
+    # than the server; the README must say how to pin it to the server's release.
+    text = AGENT_README.read_text()
+    section = text.split("\n## Match the server version", 1)[1].split("\n## ", 1)[0]
+    assert "./deploy.py config" in section
+    assert "netbird=" in section
+    native = text.index("## Option B: Native")
+    match = text.index("## Match the server version")
+    assert native < match < text.index("## Verify")
+    upgrade = text.split("\n## Upgrade", 1)[1].split("\n## ", 1)[0]
+    assert "netbird=" in upgrade
