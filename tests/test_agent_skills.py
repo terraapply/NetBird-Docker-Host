@@ -19,7 +19,7 @@ READMES = (
     REPO_ROOT / "netbird-agent" / "README.md",
 )
 
-SKILLS = ()
+SKILLS = ("netbird-install-server",)
 
 # Files an agent never opens: whatever it reads is sent to the AI provider.
 SECRET_PATHS = (
@@ -151,3 +151,14 @@ def test_skill_does_not_copy_readme_blocks(name):
         if block.count("\n") >= 1 and any(block in r for r in readme_blocks)
     ]
     assert copied == []
+
+
+def test_install_server_checks_without_opening_config():
+    text = skill_text("netbird-install-server")
+    for needle in (
+        "./deploy.py config",
+        "./deploy.py validate",
+        "openssl rand -base64 32",
+        "netbird-install-agent",
+    ):
+        assert needle in text

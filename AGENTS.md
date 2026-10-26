@@ -41,7 +41,7 @@ Never run `docker compose config` or `docker inspect` on the server, directly or
 Do this instead:
 
 - See the server config with `./deploy.py config`. It prints every value and shows secrets as `<redacted>`.
-- Find unfinished config with `./deploy.py validate`. Its preflight names any value still set to `replace_me`.
+- Find unfinished config with `./deploy.py`: its preflight stops with exit 2, before touching anything, and names every secret still empty or set to `replace_me`. Once the stack has been rendered, `./deploy.py validate` runs the same preflight.
 - Check these files by metadata only: `stat`, `ls -l`, `test -s`, `grep -c` (a count, never the lines).
 - Change a non-secret key (an image tag, `local_auth`, a domain) with one targeted command, for example `sed -i 's|^\(  netbird_server: \).*|\1netbirdio/netbird-server:<tag>|' netbird.yaml`. Show it to the user before running it, then confirm the result with `./deploy.py config`. Claude Code's Edit tool needs a Read first, so do not use it on these files.
 - For a secret value, tell the user which key to fill and the command that generates it (for example `openssl rand -base64 32`), and let them type it in.
@@ -113,3 +113,4 @@ Each job has a skill in `.agents/skills/`. Load the one that fits before you sta
 
 | Skill | Use it when |
 |---|---|
+| [netbird-install-server](.agents/skills/netbird-install-server/SKILL.md) | Setting up the NetBird server on a new VM, up to the first login |
