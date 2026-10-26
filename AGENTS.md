@@ -20,7 +20,7 @@ Overview: [README.md](README.md). Contribution rules: [CONTRIBUTING.md](CONTRIBU
 1. Edit `netbird.yaml` or a template in `netbird-server/template/`, never `config.yaml`, `dex/config.yaml` or `.env`. `deploy.py` regenerates them on every run and the change is lost.
 2. Never open, print, paste or commit a secret file; see [Secret files](#secret-files). Whatever you read is sent to the AI provider.
 3. Never change `server.store_encryption_key` on an existing database. Every encrypted column becomes unreadable, with no way back. Refuse and explain, even when asked to "rotate everything".
-4. A setup key is written only with the hidden-prompt file method in [the agent README](netbird-agent/README.md#setup-keys), never as a command-line argument or an environment variable: it would end up in shell history, `ps` output and `docker inspect`.
+4. A setup key is written only with the hidden-prompt file method in [Setup keys](README.md#setup-keys), never as a command-line argument or an environment variable: it would end up in shell history, `ps` output and `docker inspect`.
 5. One agent install method per VM. A Docker client and a native client fight over the same WireGuard interface.
 6. NetBird server and agent versions move together. Upgrade the server first; an agent newer than its server is untested.
 7. Ask before anything hard to undo; see [Confirm or refuse](#confirm-or-refuse).

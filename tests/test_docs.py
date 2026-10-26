@@ -105,43 +105,65 @@ def test_no_todo_in_docs():
     assert left == []
 
 
-def test_agent_readme_warns_one_method_per_vm():
+def test_readme_warns_one_method_per_vm():
     # Two clients on one VM fight over the same WireGuard interface, so the
     # warning must come before the reader picks an option.
-    text = AGENT_README.read_text()
-    intro = text.split("\n## Option A: Docker", 1)[0]
-    assert "one method per VM" in intro
+    join = doc_section(ROOT_README, "## Join agents")
+    assert "one method per VM" in join.split("\n### Option A: Docker", 1)[0]
 
 
-def test_agent_readme_never_puts_setup_key_on_command_line():
-    bad = [
-        line
-        for line in AGENT_README.read_text().splitlines()
-        if re.search(r"--setup-key[\s=]|NB_SETUP_KEY=", line)
-    ]
-    assert bad == []
+def test_readmes_never_put_setup_key_on_command_line():
+    for doc in (ROOT_README, SERVER_README, AGENT_README):
+        assert not re.search(r"--setup-key[\s=]|NB_SETUP_KEY=", doc.read_text()), doc
 
 
 def test_agent_readme_rekey_steps_are_runnable():
     # A bare `netbird up` skips sudo, the management URL and the key file,
     # and starts the SSO login instead of using the new key.
-    trouble = AGENT_README.read_text().split("\n## Troubleshooting", 1)[1]
+    trouble = doc_section(AGENT_README, "## Troubleshooting")
     assert "`netbird up`" not in trouble
-    assert "(#option-b-native)" in trouble
+    assert "(../README.md#option-b-native)" in trouble
 
 
-def test_agent_readme_has_match_server_version():
+def test_readme_has_match_server_version():
     # The install script and apt install the latest client, which can be newer
     # than the server; the README must say how to pin it to the server's release.
+    text = ROOT_README.read_text()
+    match = doc_section(ROOT_README, "### Match the server version")
+    assert "./deploy.py config" in match
+    assert "netbird=" in match
+    native = text.index("### Option B: Native")
+    assert (
+        native < text.index("### Match the server version") < text.index("### Verify")
+    )
+    assert "netbird=" in doc_section(AGENT_README, "## Upgrade")
+
+
+def test_agent_readme_has_no_install_steps():
     text = AGENT_README.read_text()
-    section = text.split("\n## Match the server version", 1)[1].split("\n## ", 1)[0]
-    assert "./deploy.py config" in section
-    assert "netbird=" in section
-    native = text.index("## Option B: Native")
-    match = text.index("## Match the server version")
-    assert native < match < text.index("## Verify")
-    upgrade = text.split("\n## Upgrade", 1)[1].split("\n## ", 1)[0]
-    assert "netbird=" in upgrade
+    for heading in (
+        "## Requirements",
+        "## Setup keys",
+        "## Option A: Docker",
+        "## Option B: Native",
+        "## Match the server version",
+        "## Verify",
+    ):
+        assert f"\n{heading}\n" not in text, heading
+    assert "../README.md#join-agents" in text
+
+
+def test_readme_docker_agent_commands_follow_cd():
+    blocks = re.findall(
+        r"```bash\n(.*?)```", doc_section(ROOT_README, "### Option A: Docker"), re.S
+    )
+    first_cd = next(
+        i
+        for i, b in enumerate(blocks)
+        if "cd NetBird-Docker-Host/netbird-agent/docker" in b
+    )
+    first_up = next(i for i, b in enumerate(blocks) if "docker compose up -d" in b)
+    assert first_cd < first_up
 
 
 def test_readme_netbird_badge_matches_example():

@@ -1,6 +1,6 @@
 # NetBird agent (client) joining this VM to a self-hosted NetBird network.
 # Needs .env (copy .env.example) and a 0600 setup-key file next to this file.
-# Setup, upgrade and uninstall: ../README.md, "Option A: Docker".
+# Install: ../../README.md, "Join agents". Upgrade and uninstall: ../README.md.
 name: netbird-agent
 
 services:

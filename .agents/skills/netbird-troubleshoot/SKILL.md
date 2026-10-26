@@ -38,7 +38,7 @@ When a fix is not obvious, read that function in [deploy.py](../../../netbird-se
 
 - Docker, from `netbird-agent/docker/`: `docker compose ps`, `docker compose logs --tail=100 netbird`, `docker compose exec netbird netbird status -d`, and `test -s setup-key && echo present`.
 - Native: `netbird status -d`, `systemctl status netbird`, `sudo tail -n 100 /var/log/netbird/client.log`.
-- Both: `curl -I <management URL>` must answer, `ls -l /dev/net/tun` must exist, and `netbird version` must not be newer than the server (see [Match the server version](../../../netbird-agent/README.md#match-the-server-version)).
+- Both: `curl -I <management URL>` must answer, `ls -l /dev/net/tun` must exist, and `netbird version` must not be newer than the server (see [Match the server version](../../../README.md#match-the-server-version)).
 
 ## 3. Match known problems
 
