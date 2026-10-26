@@ -4,12 +4,20 @@ import re
 import subprocess
 from pathlib import Path
 
+import yaml
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
+ROOT_README = REPO_ROOT / "README.md"
+SERVER_README = REPO_ROOT / "netbird-server" / "README.md"
 AGENT_README = REPO_ROOT / "netbird-agent" / "README.md"
 
 HEADING = re.compile(r"^(?:>\s*)?#{1,6}\s+(.*?)\s*#*\s*$")
 LINK = re.compile(r"\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
 FENCE = re.compile(r"^\s*(```|~~~)")
+BADGE = re.compile(
+    r"!\[NetBird (\d+\.\d+\.\d+)\]"
+    r"\(https://img\.shields\.io/badge/NetBird-(\d+\.\d+\.\d+)-"
+)
 
 
 def tracked_docs():
@@ -31,6 +39,26 @@ def prose_lines(path):
             continue
         if not in_fence:
             yield line
+
+
+def doc_section(path, heading):
+    """From `heading` (hashes included) to the next heading at its level or above."""
+    level = len(heading) - len(heading.lstrip("#"))
+    lines, out, in_fence, found = path.read_text().splitlines(), [], False, False
+    for line in lines:
+        if FENCE.match(line):
+            in_fence = not in_fence
+        elif not in_fence and HEADING.match(line):
+            hashes = len(line) - len(line.lstrip("#"))
+            if found and line.startswith("#") and hashes <= level:
+                break
+            if line == heading:
+                found = True
+        if found:
+            out.append(line)
+    if not found:
+        raise ValueError(f"{heading!r} not in {path}")
+    return "\n".join(out)
 
 
 def slug(text):
@@ -114,3 +142,24 @@ def test_agent_readme_has_match_server_version():
     assert native < match < text.index("## Verify")
     upgrade = text.split("\n## Upgrade", 1)[1].split("\n## ", 1)[0]
     assert "netbird=" in upgrade
+
+
+def test_readme_netbird_badge_matches_example():
+    example = REPO_ROOT / "netbird-server" / "netbird.example.yaml"
+    tag = yaml.safe_load(example.read_text())["images"]["netbird_server"]
+    version = tag.rsplit(":", 1)[1]
+    assert BADGE.findall(ROOT_README.read_text()) == [(version, version)]
+
+
+def test_readme_badges_point_at_this_repo():
+    urls = re.findall(
+        r"https://img\.shields\.io/github/[^)\s]+", ROOT_README.read_text()
+    )
+    assert len(urls) >= 3
+    assert all("terraapply/NetBird-Docker-Host" in u for u in urls)
+
+
+def test_readme_badges_use_one_style():
+    urls = re.findall(r"https://img\.shields\.io/[^)\s]+", ROOT_README.read_text())
+    assert len(urls) >= 10
+    assert all("style=flat-square" in u for u in urls)

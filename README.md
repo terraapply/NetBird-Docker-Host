@@ -1,5 +1,18 @@
 # NetBird Docker Host
 
+[![CI](https://img.shields.io/github/actions/workflow/status/terraapply/NetBird-Docker-Host/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/terraapply/NetBird-Docker-Host/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/terraapply/NetBird-Docker-Host?style=flat-square)](https://github.com/terraapply/NetBird-Docker-Host/releases)
+[![License: MIT](https://img.shields.io/github/license/terraapply/NetBird-Docker-Host?style=flat-square)](LICENSE)
+<br>
+[![NetBird 0.77.0](https://img.shields.io/badge/NetBird-0.77.0-blue?style=flat-square)](netbird-server/netbird.example.yaml)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue?style=flat-square&logo=python&logoColor=white)](CONTRIBUTING.md#setup)
+[![Docker Compose v2](https://img.shields.io/badge/docker_compose-v2-blue?style=flat-square&logo=docker&logoColor=white)](https://docs.docker.com/compose/)
+<br>
+[![Renovate enabled](https://img.shields.io/badge/renovate-enabled-brightgreen?style=flat-square&logo=renovatebot)](renovate.json)
+[![pre-commit enabled](https://img.shields.io/badge/pre--commit-enabled-brightgreen?style=flat-square&logo=pre-commit)](.pre-commit-config.yaml)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json&style=flat-square)](https://github.com/astral-sh/ruff)
+[![AI agents: AGENTS.md](https://img.shields.io/badge/AI_agents-AGENTS.md-blueviolet?style=flat-square)](AGENTS.md)
+
 Self-hosted [NetBird](https://netbird.io) setup for virtual machines.
 
 NetBird is a WireGuard-based overlay network. This repository holds everything needed to run your own NetBird control plane on one VM and connect other VMs to it as peers.
