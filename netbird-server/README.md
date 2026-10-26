@@ -113,6 +113,8 @@ no environment expansion in its config, which is why templates exist at all.
 
 ## Day-2 operations
 
+Run these from `netbird-server/` on the server VM.
+
 ### Backups
 
 Two things matter: the database and `netbird.yaml`. Everything else is derived,
@@ -162,16 +164,16 @@ That pulls, recreates only what changed, and re-validates. Latest tags:
 
 ### Rotating secrets
 
-Edit `netbird.yaml` and run `./deploy.py`. Two exceptions:
+Edit `netbird.yaml` and run `./deploy.py`, with two exceptions.
 
 > [!CAUTION]
 > **`server.store_encryption_key` cannot be rotated** against an existing
 > database. Changing it makes every encrypted column unreadable.
 
-- **`postgres.password`** is only applied when the data directory is empty.
-  Change it on a live instance with
-  `docker compose exec -T postgres psql -U netbird -c "ALTER USER netbird PASSWORD '<new>'"`,
-  then update `netbird.yaml` to match.
+**`postgres.password`** is only applied when the data directory is empty.
+Change it on a live instance with
+`docker compose exec -T postgres psql -U netbird -c "ALTER USER netbird PASSWORD '<new>'"`,
+then update `netbird.yaml` to match.
 
 Rotating `oidc.client_secret` is a two-sided change: `deploy.py` updates Dex, but
 you must also update the secret in *Settings → Identity Providers*, or login

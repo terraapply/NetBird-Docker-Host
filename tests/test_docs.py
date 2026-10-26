@@ -304,3 +304,42 @@ def test_component_readmes_share_the_header():
         head = doc.read_text().split("\n## ", 1)[0]
         assert '<div align="center">\n\n' in head, doc
         assert "](../README.md" in head, doc
+
+
+def test_readme_upgrade_row_backs_up_first():
+    common = doc_section(ROOT_README, "### Common tasks")
+    row = next(ln for ln in common.splitlines() if ln.startswith("| Upgrade NetBird"))
+    assert "Back up" in row
+    assert "(netbird-server/README.md#upgrades)" in row
+
+
+def test_readme_renovate_badge_has_a_logo():
+    # shields.io draws no logo for an unknown simple-icons slug.
+    text = ROOT_README.read_text()
+    assert "logo=renovatebot" not in text
+    assert "logo=renovate&" in text or "logo=renovate)" in text
+
+
+def test_component_readme_commands_name_their_directory():
+    upgrade = doc_section(AGENT_README, "## Upgrade")
+    assert upgrade.index("from `netbird-agent/docker`") < upgrade.index("git pull")
+    assert "`docker/docker-compose.yml`" in upgrade
+    day2 = doc_section(SERVER_README, "## Day-2 operations")
+    assert "from `netbird-server/`" in day2.split("### Backups", 1)[0]
+
+
+def test_agent_readme_hidden_prompt_links_its_command():
+    # The hidden-prompt command lives in the root README's Docker option.
+    trouble = doc_section(AGENT_README, "## Troubleshooting")
+    assert trouble.count("[hidden prompt](../README.md#option-a-docker)") == 2
+
+
+def test_readme_setup_keys_has_no_command_to_run_in_place():
+    # Run before either option's cd, it would leave a key file in the wrong clone.
+    assert "```" not in doc_section(ROOT_README, "### Setup keys")
+
+
+def test_server_readme_rotation_names_both_exceptions():
+    rotation = doc_section(SERVER_README, "### Rotating secrets")
+    assert "- **`postgres.password`**" not in rotation
+    assert "**`postgres.password`**" in rotation

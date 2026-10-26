@@ -17,7 +17,7 @@ The NetBird client joins a Linux VM to the network as a peer, with Docker (`dock
 
 Upgrade the server first, then the agents. An agent newer than its server is untested.
 
-Docker: the image is pinned in `docker-compose.yml` to the same NetBird release as the server in [`../netbird-server`](../netbird-server/README.md), and the two move together in this repository, so pull the repository first:
+Docker, from `netbird-agent/docker`: the image is pinned in `docker/docker-compose.yml` to the same NetBird release as the server in [`../netbird-server`](../netbird-server/README.md), and the two move together in this repository, so pull the repository first:
 
 ```bash
 git pull
@@ -62,6 +62,6 @@ Both: delete the peer in the dashboard under **Peers**.
 | Symptom | Cause and fix |
 |---|---|
 | `Management: Disconnected` or stuck connecting | Wrong management URL, or `443/tcp` to the server is blocked. From the VM run `curl -I https://netbird.example.com` with your URL; it must answer. Docker: check `NB_MANAGEMENT_URL` in `.env`, then `docker compose up -d`. |
-| `docker compose up` fails with `bind source path does not exist: .../setup-key` | The `setup-key` file is missing. Write it with the hidden prompt, then `docker compose up -d`. |
-| Setup key rejected in the logs | The key expired, was revoked, or is a one-off key already spent on another peer. Create a new key. Docker: write `setup-key` again with the hidden prompt, then `docker compose up -d --force-recreate`. Native: run the last three commands of [Option B](../README.md#option-b-native) again. |
+| `docker compose up` fails with `bind source path does not exist: .../setup-key` | The `setup-key` file is missing. Write it with the [hidden prompt](../README.md#option-a-docker), then `docker compose up -d`. |
+| Setup key rejected in the logs | The key expired, was revoked, or is a one-off key already spent on another peer. Create a new key. Docker: write `setup-key` again with the [hidden prompt](../README.md#option-a-docker), then `docker compose up -d --force-recreate`. Native: run the last three commands of [Option B](../README.md#option-b-native) again. |
 | Container exits at once or keeps restarting | Read `docker compose logs netbird`. Check that `setup-key` exists and is not empty, and that the VM has `/dev/net/tun`. |

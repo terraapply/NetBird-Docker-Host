@@ -12,7 +12,7 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue?style=flat-square&logo=python&logoColor=white)](CONTRIBUTING.md#setup)
 [![Docker Compose v2](https://img.shields.io/badge/docker_compose-v2-blue?style=flat-square&logo=docker&logoColor=white)](https://docs.docker.com/compose/)
 
-[![Renovate enabled](https://img.shields.io/badge/renovate-enabled-brightgreen?style=flat-square&logo=renovatebot)](renovate.json)
+[![Renovate enabled](https://img.shields.io/badge/renovate-enabled-brightgreen?style=flat-square&logo=renovate)](renovate.json)
 [![pre-commit enabled](https://img.shields.io/badge/pre--commit-enabled-brightgreen?style=flat-square&logo=pre-commit)](.pre-commit-config.yaml)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json&style=flat-square)](https://github.com/astral-sh/ruff)
 [![AI agents: AGENTS.md](https://img.shields.io/badge/AI_agents-AGENTS.md-blueviolet?style=flat-square)](AGENTS.md)
@@ -317,13 +317,7 @@ Create one in the dashboard under **Setup Keys**:
 
 Give it a short expiry either way. A setup key is a secret: anyone holding a valid one can join your network.
 
-Both methods read the key from a file only you can read, never from the command line, so it does not end up in shell history, `ps` output or `docker inspect`. This writes the file from a hidden prompt (bash):
-
-```bash
-install -m 600 /dev/null setup-key && read -rsp 'Setup key: ' key && printf '%s' "$key" > setup-key && unset key && echo
-```
-
-Paste the key at the prompt; nothing is echoed.
+Both methods read the key from a file only you can read, never from the command line, so it does not end up in shell history, `ps` output or `docker inspect`. Each option below writes that file from a hidden prompt, in the directory where it belongs: paste the key at the prompt and nothing is echoed.
 
 ### Option A: Docker
 
@@ -452,7 +446,7 @@ The exit code tells you how far `deploy.py` got:
 |---|---|
 | Change a hostname, secret or setting | Edit `netbird.yaml`, run `./deploy.py` |
 | Turn local email/password login on or off | Set `server.local_auth` in `netbird.yaml`, run `./deploy.py` |
-| Upgrade NetBird, Dex or Traefik | Bump the tag under `images:`, run `./deploy.py update` |
+| Upgrade NetBird, Dex or Traefik | Back up, bump the tag under `images:`, run `./deploy.py update`; see [Upgrades](netbird-server/README.md#upgrades) |
 | See why something is broken | `./deploy.py validate`; each failure prints its fix |
 | Read logs | `docker compose logs -f netbird-server` |
 | Back up | [Backups](netbird-server/README.md#backups) |
