@@ -1,6 +1,15 @@
+<div align="center">
+
 # NetBird self-hosted control plane
 
-Part of [NetBird Docker Host](../README.md).
+**Reference for the server stack in [NetBird Docker Host](../README.md): how it works, day-2 operations, troubleshooting.**
+
+[![CI](https://img.shields.io/github/actions/workflow/status/terraapply/NetBird-Docker-Host/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/terraapply/NetBird-Docker-Host/actions/workflows/ci.yml)
+[![AI agents: AGENTS.md](https://img.shields.io/badge/AI_agents-AGENTS.md-blueviolet?style=flat-square)](../AGENTS.md)
+
+[Install guide](../README.md#deploy-the-server) · [Operate](../README.md#operate) · [How it works](#how-it-works) · [Day-2 operations](#day-2-operations) · [Troubleshooting](#troubleshooting) · [Hardening](#hardening-and-extras)
+
+</div>
 
 A private VPN control plane on one Linux VM, where **logging in means being a
 member of your GitHub organisation**. Everything is driven by a single config
@@ -10,8 +19,7 @@ telling you what to fix when one fails.
 
 Requirements and the install steps are in the root README under
 [Deploy the server](../README.md#deploy-the-server); everyday commands and exit
-codes are under [Operate](../README.md#operate). This page is the reference: how
-the stack works, day-2 operations, troubleshooting and hardening.
+codes are under [Operate](../README.md#operate).
 
 ---
 
@@ -156,8 +164,10 @@ That pulls, recreates only what changed, and re-validates. Latest tags:
 
 Edit `netbird.yaml` and run `./deploy.py`. Two exceptions:
 
-- **`server.store_encryption_key` cannot be rotated** against an existing
-  database. Changing it makes every encrypted column unreadable.
+> [!CAUTION]
+> **`server.store_encryption_key` cannot be rotated** against an existing
+> database. Changing it makes every encrypted column unreadable.
+
 - **`postgres.password`** is only applied when the data directory is empty.
   Change it on a live instance with
   `docker compose exec -T postgres psql -U netbird -c "ALTER USER netbird PASSWORD '<new>'"`,
@@ -205,9 +215,11 @@ server:
 then `./deploy.py`. Note the flag is positive: `local_auth: false` renders
 NetBird's `localAuthDisabled: true`.
 
-Only do this after the checks above pass, and only if you accept that GitHub
-becomes the single way in: a GitHub outage or an expired client secret locks out
-everyone, including you. `deploy.py` warns on every run while it is off.
+> [!WARNING]
+> Only do this after every check in [Prove it works](../README.md#prove-it-works)
+> passes, and only if you accept that GitHub becomes the single way in: a GitHub
+> outage or an expired client secret locks out everyone, including you.
+> `deploy.py` warns on every run while it is off.
 
 **Restrict to specific GitHub teams.** In `template/dex.config.yaml.tmpl`:
 

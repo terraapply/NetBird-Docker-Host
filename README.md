@@ -1,49 +1,81 @@
+<div align="center">
+
 # NetBird Docker Host
+
+**Self-hosted [NetBird](https://netbird.io) for your VMs: GitHub-organisation login, one config file, one command.**
 
 [![CI](https://img.shields.io/github/actions/workflow/status/terraapply/NetBird-Docker-Host/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/terraapply/NetBird-Docker-Host/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/terraapply/NetBird-Docker-Host?style=flat-square)](https://github.com/terraapply/NetBird-Docker-Host/releases)
 [![License: MIT](https://img.shields.io/github/license/terraapply/NetBird-Docker-Host?style=flat-square)](LICENSE)
-<br>
+
 [![NetBird 0.77.0](https://img.shields.io/badge/NetBird-0.77.0-blue?style=flat-square)](netbird-server/netbird.example.yaml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue?style=flat-square&logo=python&logoColor=white)](CONTRIBUTING.md#setup)
 [![Docker Compose v2](https://img.shields.io/badge/docker_compose-v2-blue?style=flat-square&logo=docker&logoColor=white)](https://docs.docker.com/compose/)
-<br>
+
 [![Renovate enabled](https://img.shields.io/badge/renovate-enabled-brightgreen?style=flat-square&logo=renovatebot)](renovate.json)
 [![pre-commit enabled](https://img.shields.io/badge/pre--commit-enabled-brightgreen?style=flat-square&logo=pre-commit)](.pre-commit-config.yaml)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json&style=flat-square)](https://github.com/astral-sh/ruff)
 [![AI agents: AGENTS.md](https://img.shields.io/badge/AI_agents-AGENTS.md-blueviolet?style=flat-square)](AGENTS.md)
 
-Self-hosted [NetBird](https://netbird.io) setup for virtual machines.
+[Requirements](#requirements) · [Deploy the server](#deploy-the-server) · [Join agents](#join-agents) · [Operate](#operate) · [AI agents](#using-an-ai-agent) · [Server reference](netbird-server/README.md)
 
-NetBird is a WireGuard-based overlay network. This repository holds everything needed to run your own NetBird control plane on one VM and connect other VMs to it as peers.
+</div>
 
-## Repository layout
+NetBird is a WireGuard-based overlay network. This repository holds everything needed to run your own NetBird control plane on one VM and connect other VMs to it as peers. This page is the full install guide; the [server](netbird-server/README.md) and [agent](netbird-agent/README.md) READMEs are the reference.
+## What you get
 
-| Path | Purpose |
-|---|---|
-| [`netbird-server/`](netbird-server/README.md) | Self-hosted NetBird server on a VM, running in Docker |
-| [`netbird-agent/`](netbird-agent/README.md) | Standalone NetBird agent for a VM, installed with Docker or natively |
+- **GitHub-organisation login.** Dex sits between NetBird and GitHub, so only members of your organisation get in. A local break-glass admin stays available if GitHub breaks.
+- **One config file, one command.** `netbird.yaml` holds every setting and secret; `./deploy.py` renders the configs, starts the stack and checks it.
+- **Nine checks after every deploy.** TLS, both OIDC issuers, the API, Dex and STUN, each failure with the command that fixes it.
+- **Agents your way.** Join VMs with the Docker client or the native package, pinned to the server's release.
+- **Kept current.** Renovate bumps image tags in tested groups, and CI lints and tests every change.
 
 ## Architecture
 
-```
-            +---------------------------+
-            |  Server VM                |
-            |  netbird-server (Docker)  |
-            +-------------+-------------+
-                          |
-          +---------------+---------------+
-          |                               |
-+---------+---------+           +---------+---------+
-|  Agent VM         |           |  Agent VM         |
-|  netbird-agent    |  <------> |  netbird-agent    |
-|  (Docker/native)  |    P2P    |  (Docker/native)  |
-+-------------------+           +-------------------+
+```mermaid
+flowchart LR
+    admin(["Browser or netbird CLI"])
+    github[("GitHub organisation")]
+    subgraph server["Server VM, Docker Compose"]
+        traefik["Traefik: TLS and routing"]
+        nb["netbird-server: management, signal, relay, STUN"]
+        dash["dashboard"]
+        dex["Dex: GitHub to OIDC"]
+        pg[("Postgres")]
+        traefik --> nb
+        traefik --> dash
+        traefik --> dex
+        nb --> pg
+    end
+    subgraph agents["Agent VMs"]
+        a1["netbird client, Docker or native"]
+        a2["netbird client, Docker or native"]
+    end
+    admin -->|"443/tcp"| traefik
+    dex -->|"OAuth2, org check"| github
+    a1 -->|"443/tcp"| traefik
+    a2 -->|"443/tcp"| traefik
+    a1 -->|"3478/udp STUN"| nb
+    a1 <-.->|"WireGuard, relay fallback"| a2
 ```
 
-The server VM hosts the NetBird control plane. Agent VMs register with the server using a setup key and then talk to each other directly over WireGuard where possible.
+The server VM hosts the NetBird control plane. Agent VMs register with the server using a setup key and then talk to each other directly over WireGuard where possible, falling back to the relay on the server when a direct path is blocked.
 
 The server VM runs five containers: `traefik` (TLS and routing), `netbird-server` (management, signal, relay and STUN), `dashboard`, `dex` and `postgres`. Login is limited to members of one GitHub organisation through Dex, and a local break-glass login stays on by default so a GitHub problem cannot lock you out.
+
+## Tech stack
+
+| Component | Role | Runs as |
+|---|---|---|
+| Traefik | TLS with Let's Encrypt, routing for every HTTPS service | Container on the server VM |
+| NetBird server | Management, signal, relay, STUN and the embedded IdP, in one binary | Container on the server VM |
+| NetBird dashboard | Web UI | Container on the server VM |
+| Dex | Turns GitHub OAuth2 into OIDC and enforces organisation membership | Container on the server VM |
+| Postgres | The three NetBird databases | Container on the server VM |
+| NetBird client | WireGuard peer | Docker container or native package on each agent VM |
+| `deploy.py` | Renders configs, starts the stack, runs the checks | Python 3.10+ with PyYAML on the server VM |
+
+Every image is pinned to an exact tag in [`netbird-server/netbird.example.yaml`](netbird-server/netbird.example.yaml) and [`netbird-agent/docker/docker-compose.yml`](netbird-agent/docker/docker-compose.yml); Renovate keeps them current.
 
 ## Requirements
 
@@ -119,6 +151,7 @@ Create it **inside the organisation**, not on a personal account:
 Register, then **Generate a new client secret** and copy both values. The
 secret is shown once.
 
+> [!NOTE]
 > **If your org enforces OAuth App access restrictions**, an owner must approve
 > the app under *Settings → Third-party Access → OAuth App policy*. Without it
 > every login fails with an unhelpful error and Dex logs `403 Forbidden` reading
@@ -175,7 +208,8 @@ block and those five secrets. Every field has its command in a comment beside it
 **Quote every secret.** Unquoted, an all-digit value becomes a number and `no`
 becomes a boolean. `deploy.py` catches both, but quoting saves the round trip.
 
-> ### Back up `server.store_encryption_key` now
+> [!IMPORTANT]
+> **Back up `server.store_encryption_key` now.**
 >
 > It encrypts user emails and names in the database. Without it a restored
 > backup is unreadable, and it **cannot be changed later** without destroying
@@ -192,7 +226,10 @@ becomes a boolean. `deploy.py` catches both, but quoting saves the round trip.
 ```
 
 Traefik requests two certificates over TLS-ALPN-01, which takes 30 to 60 seconds on
-a first run. `deploy.py` waits, then reports:
+a first run. `deploy.py` waits, then reports every check.
+
+<details>
+<summary>Example output of a healthy first run</summary>
 
 ```
 netbird.example.com: provision
@@ -207,6 +244,8 @@ netbird.example.com: provision
 [ok  ] dex-client-secret  accepted (invalid_grant)
 [ok  ] stun               binding response, reflexive 203.0.113.10:41234
 ```
+
+</details>
 
 Anything but `ok` prints the cause and the command that fixes it. If TLS or
 either issuer fails, stop and fix it; nothing downstream works without them.
@@ -262,7 +301,10 @@ Optionally register the post-logout URL
 
 ## Join agents
 
-Each VM that joins the network runs the NetBird client and registers with the server as a peer. There are two install methods: [Docker](#option-a-docker) or the [native package](#option-b-native). Use **one method per VM**: two NetBird clients on one VM fight over the same WireGuard interface.
+Each VM that joins the network runs the NetBird client and registers with the server as a peer. There are two install methods: [Docker](#option-a-docker) or the [native package](#option-b-native).
+
+> [!WARNING]
+> Use **one method per VM**: two NetBird clients on one VM fight over the same WireGuard interface.
 
 Both methods end the same way: `netbird status` shows Management and Signal connected, and the VM appears in the dashboard under **Peers**. Check the [agent requirements](#agent-vms) first.
 
@@ -395,8 +437,14 @@ docker compose logs -f dex
 
 ### Exit codes
 
-**Exit codes** tell you how far it got: `0` fine · `2` bad config, *nothing was
-touched* · `3` failed to start · `4` running but a check failed.
+The exit code tells you how far `deploy.py` got:
+
+| Exit | Meaning |
+|---|---|
+| `0` | Fine |
+| `2` | Bad config, *nothing was touched* |
+| `3` | Failed to start |
+| `4` | Running, but a check failed |
 
 ### Common tasks
 
@@ -412,6 +460,7 @@ touched* · `3` failed to start · `4` running but a check failed.
 | Troubleshoot the server | [Troubleshooting](netbird-server/README.md#troubleshooting) |
 | Upgrade or remove an agent | [Upgrade](netbird-agent/README.md#upgrade), [Uninstall](netbird-agent/README.md#uninstall) |
 
+> [!WARNING]
 > **Never edit `config.yaml`, `dex/config.yaml` or `.env`.** They are generated
 > and overwritten on every run. Edit `netbird.yaml` instead.
 
@@ -430,6 +479,23 @@ This repository ships instructions for coding agents. [`AGENTS.md`](AGENTS.md) h
 Start your agent inside a clone of this repository, on a laptop or on a VM. A VM with the native agent install has no clone; drive it from a clone elsewhere, where the agent hands you the commands to run, or clone the repository there.
 
 Agents are told never to open `netbird.yaml`, the generated configs, setup keys or backups, because whatever an agent reads is sent to its AI provider. Do not paste secrets into the chat either.
+
+## Repository layout
+
+| Path | Purpose |
+|---|---|
+| [`netbird-server/`](netbird-server/README.md) | The control plane: `deploy.py`, the compose stack, templates and their reference docs |
+| [`netbird-agent/`](netbird-agent/README.md) | The NetBird client for agent VMs: the Docker install and its reference docs |
+| [`AGENTS.md`](AGENTS.md), [`.agents/skills/`](.agents/skills/) | Instructions and skills for coding agents |
+| `tests/`, `netbird-*/tests/` | pytest suites, run by CI with ruff, yamllint and shellcheck |
+
+## Contributing
+
+Issues and pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers the dev setup, the checks CI runs and the commit conventions.
+
+## Security
+
+Report a vulnerability privately through the repository's **Security** tab, never in a public issue. See [SECURITY.md](SECURITY.md) for scope.
 
 ## License
 

@@ -1,8 +1,17 @@
+<div align="center">
+
 # netbird-agent
 
-Part of [NetBird Docker Host](../README.md).
+**Reference for the NetBird client on agent VMs in [NetBird Docker Host](../README.md): upgrade, uninstall, troubleshooting.**
 
-The NetBird client that joins a Linux VM to the network as a peer, with Docker (`docker/`) or the native package. Requirements and both install methods are in the root README under [Join agents](../README.md#join-agents), including [setup keys](../README.md#setup-keys) and how to [match the server version](../README.md#match-the-server-version). This page covers upgrading, removing and troubleshooting an agent.
+[![CI](https://img.shields.io/github/actions/workflow/status/terraapply/NetBird-Docker-Host/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/terraapply/NetBird-Docker-Host/actions/workflows/ci.yml)
+[![AI agents: AGENTS.md](https://img.shields.io/badge/AI_agents-AGENTS.md-blueviolet?style=flat-square)](../AGENTS.md)
+
+[Install guide](../README.md#join-agents) · [Upgrade](#upgrade) · [Uninstall](#uninstall) · [Troubleshooting](#troubleshooting)
+
+</div>
+
+The NetBird client joins a Linux VM to the network as a peer, with Docker (`docker/`) or the native package. Requirements and both install methods are in the root README under [Join agents](../README.md#join-agents), including [setup keys](../README.md#setup-keys) and how to [match the server version](../README.md#match-the-server-version).
 
 ## Upgrade
 

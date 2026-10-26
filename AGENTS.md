@@ -8,8 +8,9 @@ A self-hosted [NetBird](https://netbird.io) network for Linux VMs: one VM runs t
 
 | Path | What it is |
 |---|---|
-| `netbird-server/` | The control plane: five containers driven by `deploy.py` from one config file, `netbird.yaml`. See [its README](netbird-server/README.md). |
-| `netbird-agent/` | The peer client, installed with Docker (`netbird-agent/docker/`) or natively. See [its README](netbird-agent/README.md). |
+| `README.md` | The full install guide: requirements, deploying the server, joining agents, everyday commands. |
+| `netbird-server/` | The control plane: five containers driven by `deploy.py` from one config file, `netbird.yaml`. [Its README](netbird-server/README.md) is the reference: how it works, day-2 operations, troubleshooting. |
+| `netbird-agent/` | The peer client, installed with Docker (`netbird-agent/docker/`) or natively. [Its README](netbird-agent/README.md) covers upgrade, uninstall and troubleshooting. |
 | `tests/`, `netbird-*/tests/` | pytest suites. No network; Docker tests skip when Docker is missing. |
 | `.agents/skills/` | Task skills, also reachable through `.claude/skills/`. |
 

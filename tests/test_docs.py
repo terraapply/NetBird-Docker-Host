@@ -231,3 +231,76 @@ def test_readme_deploy_commands_follow_cd():
     )
     first_run = next(i for i, b in enumerate(blocks) if "./deploy.py" in b)
     assert first_cd < first_run
+
+
+ALERT = re.compile(r"^> \[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]$")
+
+
+def test_readme_sections_in_order():
+    text = ROOT_README.read_text()
+    order = [
+        "## What you get",
+        "## Architecture",
+        "## Tech stack",
+        "## Requirements",
+        "## Deploy the server",
+        "## Join agents",
+        "## Operate",
+        "## Using an AI agent",
+        "## Repository layout",
+        "## Contributing",
+        "## Security",
+        "## License",
+    ]
+    positions = [text.index(f"\n{h}\n") for h in order]
+    assert positions == sorted(positions)
+
+
+def test_readme_header_renders_markdown():
+    # GitHub renders Markdown inside an HTML block only with blank lines around it.
+    head = ROOT_README.read_text().split("\n## ", 1)[0]
+    assert '<div align="center">\n\n' in head
+    assert "\n\n</div>" in head
+    for target in (
+        "#requirements",
+        "#deploy-the-server",
+        "#join-agents",
+        "#operate",
+        "#using-an-ai-agent",
+    ):
+        assert f"]({target})" in head, target
+
+
+def test_readme_mermaid_is_a_flowchart():
+    arch = doc_section(ROOT_README, "## Architecture")
+    block = arch.split("```mermaid\n", 1)[1].split("```", 1)[0]
+    assert block.startswith("flowchart ")
+    prose = re.sub(r"```.*?```", "", arch, flags=re.S)
+    assert len(prose.split()) > 30  # the diagram is also described in text
+
+
+def test_readme_tech_stack_names_no_image_versions():
+    stack = doc_section(ROOT_README, "## Tech stack")
+    assert not re.search(r"\b\d+\.\d+\.\d+\b|\bv\d+\.\d+|:\d+-alpine", stack)
+    assert "netbird-server/netbird.example.yaml" in stack
+
+
+def test_readme_alerts_use_github_syntax():
+    for doc in (ROOT_README, SERVER_README, AGENT_README):
+        markers = [ln for ln in doc.read_text().splitlines() if ln.startswith("> [!")]
+        assert all(ALERT.match(ln) for ln in markers), doc
+    assert any(ALERT.match(ln) for ln in ROOT_README.read_text().splitlines())
+
+
+def test_readme_key_warnings_are_alerts():
+    deploy = doc_section(ROOT_README, "## Deploy the server")
+    assert re.search(r"> \[!IMPORTANT\]\n(> .*\n)*> .*store_encryption_key", deploy)
+    join = doc_section(ROOT_README, "## Join agents")
+    assert re.search(r"> \[!WARNING\]\n(> .*\n)*> .*one method per VM", join)
+
+
+def test_component_readmes_share_the_header():
+    for doc in (SERVER_README, AGENT_README):
+        head = doc.read_text().split("\n## ", 1)[0]
+        assert '<div align="center">\n\n' in head, doc
+        assert "](../README.md" in head, doc
