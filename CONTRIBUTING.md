@@ -65,7 +65,7 @@ The rules:
 - ruff and yamllint move together with their pre-commit hooks; the script flags a pair that differs.
 - Change every line listed under `locations`, reading each first: the README badge, doc examples and the test fixture quote the NetBird version too, and a hit can be unrelated text.
 - After a `tooling` bump, reinstall `.venv` from `requirements-dev.txt` and run `ruff format .` and `ruff check --fix .`.
-- Run every command in [Checks](#checks), then the script again for that group: it should show nothing newer than you chose, and no notes.
+- Run every command in [Checks](#checks), then the script again for that group. Every pin you changed shows the new version under `CURRENT`, and no row has a `must match`, `differ` or `not found` note. A release you held back, or a Postgres major marked `APPLY no`, still shows as newer; that is expected.
 - `netbird` and `images` pull requests add a `CHANGELOG.md` line for people running the stack. `tooling` and `actions` change nothing for them and add none; say so in the pull request.
 - Wait for the pull request's CI: it runs the tests on every Python in the matrix, where your local run used one.
 
@@ -84,7 +84,7 @@ Releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The 
 Going to 1.0.0 is a maintainer's decision, never the outcome of the table.
 
 1. Open a release pull request that changes only `CHANGELOG.md`. Move the entries under `## [Unreleased]` to a new `## [X.Y.Z] - YYYY-MM-DD` heading, leave an empty `## [Unreleased]` above it, and update the links at the bottom: `[Unreleased]` compares `vX.Y.Z...HEAD`, and `[X.Y.Z]` compares the previous tag with `vX.Y.Z`. `tests/test_changelog.py` checks the result.
-2. If another pull request merges first and adds lines under `## [Unreleased]`, rebase the release pull request and move those lines into the release, since they are in the code being released. Check the version against the table again.
+2. If another pull request merges first and adds lines under `## [Unreleased]`, rebase the release pull request, move those lines into the release, since they are in the code being released, and push with `git push --force-with-lease`. Check the version against the table again.
 3. Once the release pull request has merged and CI has passed on its merge commit, tag that merge commit and push only the tag:
 
    ```bash

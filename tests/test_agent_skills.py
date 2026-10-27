@@ -363,3 +363,40 @@ def test_release_guru_cuts_from_the_changelog():
 def test_agents_md_guards_pushed_tags():
     confirm = section(AGENTS_MD.read_text(), "Confirm or refuse")
     assert "pushed tag" in confirm
+
+
+def test_release_guru_routes_each_sitting():
+    text = skill_text("release-guru")
+    start = section(text, "Before you start")
+    assert "git describe" not in start
+    assert "release/` branch" not in start
+    assert "git describe" in section(text, "Prepare")
+    router = section(text, "Which sitting")
+    for anchor in ("#prepare", "#while-the-pull-request-is-open", "#publish"):
+        assert anchor in router
+
+
+def test_release_guru_watches_the_release_run():
+    text = skill_text("release-guru")
+    assert "--workflow release.yml" in text
+    assert "gh run watch <id> --exit-status" in text
+    assert "`gh run watch`" not in text
+
+
+def test_upgrade_recheck_allows_held_rows():
+    keeping = section(CONTRIBUTING.read_text(), "Keeping versions current")
+    assert "no notes" not in keeping
+    assert "`must match`" in keeping
+    assert "nothing newer than" not in skill_text("auto-upgrade")
+    assert "APPLY no" in section(skill_text("auto-upgrade"), "3. One group, one branch")
+
+
+@pytest.mark.parametrize("name", REPO_SKILLS)
+def test_repo_skill_pushes_rebased_branches_safely(name):
+    assert "--force-with-lease" in skill_text(name)
+
+
+def test_release_guru_keeps_the_branch_name():
+    text = skill_text("release-guru")
+    assert "keep the branch name" in text
+    assert "and branch name to match" not in text

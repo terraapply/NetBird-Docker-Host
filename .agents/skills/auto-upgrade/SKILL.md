@@ -38,7 +38,7 @@ For each group the user approved, branch from an up-to-date `main`: `upgrade/net
 1. Edit every line in `locations`, reading each one first: a hit can be unrelated text that contains the same string. `netbird.example.yaml` is a tracked example with no secrets; `netbird.yaml` is never touched.
 2. NetBird: the server tag in `netbird.example.yaml` and the client tag in `netbird-agent/docker/docker-compose.yml` stay equal, which `test_client_matches_server_release` checks.
 3. Tooling: reinstall with `.venv/bin/pip install -r requirements-dev.txt`, then run `.venv/bin/ruff format .` and `.venv/bin/ruff check --fix .`. If anything still needs a hand edit, drop the group and say why.
-4. Run `python3 scripts/check_versions.py --group <group>`: every row shows nothing newer than planned, no `must match` or `differ` note, and no `not found`.
+4. Run `python3 scripts/check_versions.py --group <group>`: every pin you changed shows the planned version under `CURRENT`, and no row has a `must match`, `differ` or `not found` note. A release you held back, or a Postgres major marked `APPLY no`, still shows as newer; that is expected.
 5. Run every command in [Checks before a repo change](../../../AGENTS.md#checks-before-a-repo-change). For `netbird` and `images` the Docker tests must run, not skip; if Docker is missing, say so in the PR body. A failing check drops the group: no PR, and the report says what failed.
 6. `netbird` and `images`: add one line under `## [Unreleased]` in `CHANGELOG.md`, for someone running the stack. `tooling` and `actions` add none.
 7. Stage the changed files by name, never `git add -A`, and commit with `chore:` (`ci:` for `actions`).
@@ -55,4 +55,4 @@ The local run used one Python; CI runs the whole matrix. Run `gh pr checks <numb
 
 PR links with their CI results, groups skipped and why, releases held back and what they need, and any Postgres major waiting. Remind the user that merging changes the repo only: a running server is upgraded with `netbird-maintain`, then its agents.
 
-Two open PRs that both add a `CHANGELOG.md` line conflict once the first merges. When asked, rebase this skill's open `upgrade/` branches onto `main`, keep both lines, run the checks again and ask before pushing.
+Two open PRs that both add a `CHANGELOG.md` line conflict once the first merges. When asked, rebase this skill's open `upgrade/` branches onto `main`, keep both lines, run the checks again, ask, and push with `git push --force-with-lease`.
