@@ -83,6 +83,7 @@ Ask, and wait for a yes, before:
 - rotating any secret
 - deleting a peer in the dashboard
 - `git push`
+- deleting or moving a pushed tag
 
 Refuse, and explain why:
 
@@ -127,3 +128,4 @@ Each job has a skill in `.agents/skills/`. Load the one that fits before you sta
 | [netbird-troubleshoot](.agents/skills/netbird-troubleshoot/SKILL.md) | Something is broken on the server or an agent VM: failed checks, login, certificates, peers |
 | [netbird-extend](.agents/skills/netbird-extend/SKILL.md) | Adding or changing a feature, in the repo or in one deployment |
 | [auto-upgrade](.agents/skills/auto-upgrade/SKILL.md) | Checking the repo's pinned versions for newer releases and opening upgrade PRs (upgrading a running server is netbird-maintain) |
+| [release-guru](.agents/skills/release-guru/SKILL.md) | Cutting a release: choosing the version from the changelog, the release PR, then the tag |

@@ -30,7 +30,7 @@ DEPLOY_SKILLS = (
 )
 # Repo skills change this repository, not a deployment: their procedures live
 # in CONTRIBUTING.md instead of a README.
-REPO_SKILLS = ("auto-upgrade",)
+REPO_SKILLS = ("auto-upgrade", "release-guru")
 SKILLS = DEPLOY_SKILLS + REPO_SKILLS
 
 # Files an agent never opens: whatever it reads is sent to the AI provider.
@@ -342,3 +342,24 @@ def test_auto_upgrade_drives_the_script_safely():
 
 def test_extend_points_version_bumps_at_auto_upgrade():
     assert "auto-upgrade" in skill_text("netbird-extend")
+
+
+def test_release_guru_cuts_from_the_changelog():
+    text = skill_text("release-guru")
+    for needle in (
+        "#releasing",
+        "## [Unreleased]",
+        "release.yml",
+        "viewerPermission",
+        "netbird-server/.env",
+        "1.0.0",
+        "mergeCommit",
+        "git tag -a",
+        "gh release view",
+    ):
+        assert needle in text
+
+
+def test_agents_md_guards_pushed_tags():
+    confirm = section(AGENTS_MD.read_text(), "Confirm or refuse")
+    assert "pushed tag" in confirm

@@ -354,3 +354,9 @@ def test_contributing_keeps_versions_current():
 def test_readme_lists_the_version_script():
     assert "scripts/" in doc_section(ROOT_README, "## Repository layout")
     assert "scripts/check_versions.py" in doc_section(ROOT_README, "## Tech stack")
+
+
+def test_contributing_explains_releasing():
+    section = doc_section(REPO_ROOT / "CONTRIBUTING.md", "## Releasing")
+    for needle in ("## [Unreleased]", "release.yml", "git tag -a", "merge commit"):
+        assert needle in section

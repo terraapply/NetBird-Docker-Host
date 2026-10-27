@@ -470,8 +470,9 @@ This repository ships instructions for coding agents. [`AGENTS.md`](AGENTS.md) h
 | [netbird-troubleshoot](.agents/skills/netbird-troubleshoot/SKILL.md) | Find and fix a problem on the server or an agent VM |
 | [netbird-extend](.agents/skills/netbird-extend/SKILL.md) | Add or change a feature, in the repository or in one deployment |
 | [auto-upgrade](.agents/skills/auto-upgrade/SKILL.md) | Check every version the repository pins and open upgrade pull requests |
+| [release-guru](.agents/skills/release-guru/SKILL.md) | Pick the next version from the changelog, open the release pull request, then tag and publish |
 
-auto-upgrade works on this repository rather than a deployment, and needs push access to it.
+auto-upgrade and release-guru work on this repository rather than a deployment, and need push access to it.
 
 Start your agent inside a clone of this repository, on a laptop or on a VM. A VM with the native agent install has no clone; drive it from a clone elsewhere, where the agent hands you the commands to run, or clone the repository there.
 

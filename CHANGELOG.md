@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A test that every relative link and anchor in the docs resolves.
 - Instructions for coding agents (Claude Code, OpenCode, Codex and others): `AGENTS.md` with the rules, plus skills to install the server and agents, maintain, troubleshoot and extend the stack. Agents are told never to open files that hold secrets.
 - "Match the server version" in the install guide: pin a native agent to the server's NetBird release, since the installer always fetches the latest client.
+- `scripts/check_versions.py` lists every version this repository pins (NetBird, Traefik, Dex, Postgres, dev tools, GitHub Actions) and the newest release of each. Two agent skills for maintainers build on it: `auto-upgrade` opens tested upgrade pull requests, one per group, and `release-guru` picks the next version from this changelog, opens the release pull request and tags the release.
 
 ### Changed
 

@@ -71,6 +71,32 @@ The rules:
 
 Merging changes this repository only. A running server is upgraded as in [Upgrades](netbird-server/README.md#upgrades), and agents after it.
 
+## Releasing
+
+Releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The next version comes from what is under `## [Unreleased]` in `CHANGELOG.md`:
+
+| Under `## [Unreleased]` | Below 1.0 | From 1.0 |
+|---|---|---|
+| Removed, or a change that breaks existing setups | minor | major |
+| Added, Changed or Deprecated | minor | minor |
+| Only Fixed or Security | patch | patch |
+
+Going to 1.0.0 is a maintainer's decision, never the outcome of the table.
+
+1. Open a release pull request that changes only `CHANGELOG.md`. Move the entries under `## [Unreleased]` to a new `## [X.Y.Z] - YYYY-MM-DD` heading, leave an empty `## [Unreleased]` above it, and update the links at the bottom: `[Unreleased]` compares `vX.Y.Z...HEAD`, and `[X.Y.Z]` compares the previous tag with `vX.Y.Z`. `tests/test_changelog.py` checks the result.
+2. If another pull request merges first and adds lines under `## [Unreleased]`, rebase the release pull request and move those lines into the release, since they are in the code being released. Check the version against the table again.
+3. Once the release pull request has merged and CI has passed on its merge commit, tag that merge commit and push only the tag:
+
+   ```bash
+   git tag -a vX.Y.Z -m "vX.Y.Z" <merge-commit>
+   git push origin vX.Y.Z
+   ```
+
+   Tag the merge commit, not the newest commit on `main`: anything merged after it belongs to the next release.
+4. The tag starts [`release.yml`](.github/workflows/release.yml), which publishes a GitHub release with the `## [X.Y.Z]` section as its notes. Check it with `gh release view vX.Y.Z`.
+
+Do not delete or move a tag once it is pushed without agreeing it with the other maintainers: someone may already have fetched it.
+
 ## Agent docs
 
 [`AGENTS.md`](AGENTS.md) and the skills in `.agents/skills/` tell coding agents how to work with this repo. They link to the READMEs, or to this guide for work on the repository itself, and never copy them, so when a procedure changes, update the README or this guide first and the matching skill or `AGENTS.md` second.
