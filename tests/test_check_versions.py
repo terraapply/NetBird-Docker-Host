@@ -3,6 +3,7 @@
 import importlib.util
 import json
 import re
+import subprocess
 import sys
 import urllib.error
 from dataclasses import replace
@@ -18,6 +19,57 @@ _spec = importlib.util.spec_from_file_location(
 cv = importlib.util.module_from_spec(_spec)
 sys.modules["check_versions"] = cv
 _spec.loader.exec_module(cv)
+EXAMPLE = REPO_ROOT / "netbird-server" / "netbird.example.yaml"
+
+# Row and command-line tests run on this repo, never on the real pins, so an
+# upgrade of the real pins cannot break them.
+FAKE_REPO = {
+    "netbird-server/netbird.example.yaml": """images:
+  traefik: traefik:v3.6
+  netbird_server: netbirdio/netbird-server:0.77.0
+  dashboard: netbirdio/dashboard:v2.91.1
+  dex: ghcr.io/dexidp/dex:v2.45.1
+  postgres: postgres:17-alpine
+""",
+    "netbird-agent/docker/docker-compose.yml": """services:
+  netbird:
+    image: netbirdio/netbird:0.77.0
+""",
+    "requirements-dev.txt": """pytest==9.1.1
+ruff==0.17.2
+pre-commit==4.7.0; python_version >= "3.11"
+""",
+    ".pre-commit-config.yaml": """repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.2
+""",
+    ".github/workflows/ci.yml": """jobs:
+  test:
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+""",
+    "README.md": "[![NetBird 0.77.0](https://img.shields.io/badge/NetBird-0.77.0-blue)](x)\n",
+    "CHANGELOG.md": "- Pinned NetBird 0.77.0.\n",
+}
+
+
+@pytest.fixture
+def fake_repo(tmp_path):
+    for rel, text in FAKE_REPO.items():
+        (tmp_path / rel).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / rel).write_text(text)
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True)
+    return tmp_path
+
+
+def netbird_version():
+    tag = yaml.safe_load(EXAMPLE.read_text())["images"]["netbird_server"]
+    return tag.rsplit(":", 1)[1]
 
 
 def found(**match):
@@ -29,11 +81,10 @@ def found(**match):
 
 
 def test_finds_every_image():
-    example = REPO_ROOT / "netbird-server" / "netbird.example.yaml"
     compose = REPO_ROOT / "netbird-agent" / "docker" / "docker-compose.yml"
     services = yaml.safe_load(compose.read_text())["services"].values()
     refs = [
-        *yaml.safe_load(example.read_text())["images"].values(),
+        *yaml.safe_load(EXAMPLE.read_text())["images"].values(),
         *(s["image"] for s in services),
     ]
     assert found(source="image") == {tuple(r.rsplit(":", 1)) for r in refs}
@@ -45,7 +96,10 @@ def test_finds_every_dev_requirement():
     lines = (REPO_ROOT / "requirements-dev.txt").read_text().splitlines()
     wanted = {tuple(ln.split(";")[0].strip().split("==")) for ln in lines if ln}
     assert found(source="pypi") == wanted
-    markers = {p.name: p.marker for p in cv.find_pins(REPO_ROOT)}
+
+
+def test_requirement_markers_are_read(fake_repo):
+    markers = {p.name: p.marker for p in cv.find_pins(fake_repo)}
     assert markers["pre-commit"] == ">=3.11"
     assert markers["pytest"] == ""
 
@@ -68,8 +122,10 @@ def test_finds_every_action():
 
 
 def test_python_matrix():
-    assert cv.ci_pythons(REPO_ROOT) == ["3.10", "3.12"]
-    assert found(source="python") == {("python", "3.12")}
+    ci = yaml.safe_load((REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text())
+    matrix = ci["jobs"]["test"]["strategy"]["matrix"]["python-version"]
+    assert cv.ci_pythons(REPO_ROOT) == matrix
+    assert found(source="python") == {("python", max(matrix, key=cv.version_key))}
 
 
 def test_odd_lines_are_skipped_or_parsed(tmp_path):
@@ -205,86 +261,85 @@ def lookups(monkeypatch):
     return fake
 
 
-def rows(pins=None):
-    pins = cv.find_pins(REPO_ROOT) if pins is None else pins
-    checked = cv.check(REPO_ROOT, pins, cv.ci_pythons(REPO_ROOT))
+def rows(root, pins=None):
+    pins = cv.find_pins(root) if pins is None else pins
+    checked = cv.check(root, pins, cv.ci_pythons(root))
     return {r.pin.name: r for r in checked}
 
 
-def changed(name, current):
+def changed(root, name, current):
     return [
-        replace(p, current=current) if p.name == name else p
-        for p in cv.find_pins(REPO_ROOT)
+        replace(p, current=current) if p.name == name else p for p in cv.find_pins(root)
     ]
 
 
-def test_netbird_target_needs_server_and_client(lookups):
-    r = rows()
+def test_netbird_target_needs_server_and_client(lookups, fake_repo):
+    r = rows(fake_repo)
     assert r["netbirdio/netbird-server"].candidates == ["0.78.0"]
     assert r["netbirdio/netbird"].candidates == ["0.78.0"]
     assert r["netbirdio/netbird-server"].jump == "major"
 
 
-def test_dashboard_has_its_own_tag(lookups):
-    assert rows()["netbirdio/dashboard"].newest == "v2.92.0"
+def test_dashboard_has_its_own_tag(lookups, fake_repo):
+    assert rows(fake_repo)["netbirdio/dashboard"].newest == "v2.92.0"
 
 
-def test_postgres_major_is_never_applied(lookups):
-    row = rows()["postgres"]
+def test_postgres_major_is_never_applied(lookups, fake_repo):
+    row = rows(fake_repo)["postgres"]
     assert row.newest == "18-alpine"
     assert row.apply is False
     assert any("data directory" in n for n in row.notes)
 
 
-def test_release_that_drops_a_ci_python_is_not_offered(lookups):
-    row = rows()["pytest"]
+def test_release_that_drops_a_ci_python_is_not_offered(lookups, fake_repo):
+    row = rows(fake_repo)["pytest"]
     assert row.candidates == []
     assert any("9.2.0" in n and ">=3.11" in n for n in row.notes)
 
 
-def test_marker_limits_the_pythons_checked(lookups):
-    assert rows()["pre-commit"].candidates == ["4.8.0"]
+def test_marker_limits_the_pythons_checked(lookups, fake_repo):
+    assert rows(fake_repo)["pre-commit"].candidates == ["4.8.0"]
 
 
-def test_newest_ci_python_moves(lookups):
-    assert rows()["python"].candidates == ["3.13", "3.14"]
+def test_newest_ci_python_moves(lookups, fake_repo):
+    assert rows(fake_repo)["python"].candidates == ["3.13", "3.14"]
 
 
-def test_server_and_client_mismatch_is_flagged(lookups):
-    r = rows(changed("netbirdio/netbird", "0.76.0"))
+def test_server_and_client_mismatch_is_flagged(lookups, fake_repo):
+    r = rows(fake_repo, changed(fake_repo, "netbirdio/netbird", "0.76.0"))
     for name in ("netbirdio/netbird-server", "netbirdio/netbird"):
         assert any("0.76.0" in n and "0.77.0" in n for n in r[name].notes)
 
 
-def test_lint_tool_pair_mismatch_is_flagged(lookups):
-    r = rows(changed("astral-sh/ruff-pre-commit", "v0.17.1"))
+def test_lint_tool_pair_mismatch_is_flagged(lookups, fake_repo):
+    r = rows(fake_repo, changed(fake_repo, "astral-sh/ruff-pre-commit", "v0.17.1"))
     assert any("v0.17.1" in n for n in r["ruff"].notes)
     assert any("0.17.2" in n for n in r["astral-sh/ruff-pre-commit"].notes)
 
 
-def test_missing_current_tag_is_flagged(lookups, capsys):
+def test_missing_current_tag_is_flagged(lookups, fake_repo, capsys):
     lookups["missing"].add(("ghcr.io/dexidp/dex", "v2.45.1"))
-    assert rows()["ghcr.io/dexidp/dex"].exists is False
-    cv.main(["--group", "images"])
+    assert rows(fake_repo)["ghcr.io/dexidp/dex"].exists is False
+    cv.main(["--group", "images"], root=fake_repo)
     assert "not found" in capsys.readouterr().out
 
 
-def test_failed_lookup_is_an_error_row(lookups, capsys):
+def test_failed_lookup_is_an_error_row(lookups, fake_repo, capsys):
     lookups["fail"]["traefik"] = urllib.error.URLError("timed out")
-    assert cv.main(["--group", "images"]) == 1
+    assert cv.main(["--group", "images"], root=fake_repo) == 1
     out = capsys.readouterr().out
     assert "timed out" in out
     assert "ghcr.io/dexidp/dex" in out
 
 
-def test_offline_run_prints_valid_json(lookups, capsys):
+def test_offline_run_prints_valid_json(lookups, fake_repo, capsys):
     lookups["fail_all"] = urllib.error.URLError("no network")
-    assert cv.main(["--json"]) == 1
+    assert cv.main(["--json"], root=fake_repo) == 1
     data = json.loads(capsys.readouterr().out)
     assert data and all(row["error"] for row in data)
 
 
-def test_rate_limit_hints_at_token(lookups, capsys):
+def test_rate_limit_hints_at_token(lookups, fake_repo, capsys):
     lookups["fail"]["actions/checkout"] = urllib.error.HTTPError(
         "https://api.github.com/repos/actions/checkout/tags",
         403,
@@ -292,12 +347,12 @@ def test_rate_limit_hints_at_token(lookups, capsys):
         None,
         None,
     )
-    assert cv.main(["--group", "actions"]) == 1
+    assert cv.main(["--group", "actions"], root=fake_repo) == 1
     assert "GITHUB_TOKEN" in capsys.readouterr().out
 
 
-def test_json_lists_where_each_version_appears(lookups, capsys):
-    assert cv.main(["--json", "--group", "netbird"]) == 0
+def test_json_lists_where_each_version_appears(lookups, fake_repo, capsys):
+    assert cv.main(["--json", "--group", "netbird"], root=fake_repo) == 0
     data = {row["name"]: row for row in json.loads(capsys.readouterr().out)}
     assert set(data) == set(cv.NETBIRD)
     locs = data["netbirdio/netbird-server"]["locations"]
@@ -311,15 +366,13 @@ def test_json_lists_where_each_version_appears(lookups, capsys):
 
 
 def test_locations_skip_this_scripts_fake_data():
-    locs = cv.locations(REPO_ROOT, "0.77.0")
+    locs = cv.locations(REPO_ROOT, netbird_version())
     assert any(loc.startswith("README.md:") for loc in locs)
     assert not any(loc.startswith("tests/test_check_versions.py:") for loc in locs)
 
 
 def test_config_comments_name_no_netbird_version():
-    example = REPO_ROOT / "netbird-server" / "netbird.example.yaml"
-    tag = yaml.safe_load(example.read_text())["images"]["netbird_server"]
-    version = tag.rsplit(":", 1)[1]
+    version = netbird_version()
     for rel in (
         "netbird-server/netbird.example.yaml",
         "netbird-server/template/dex.config.yaml.tmpl",

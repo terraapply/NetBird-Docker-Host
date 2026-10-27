@@ -493,7 +493,7 @@ def to_json(rows: list[Row]) -> str:
     )
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: list[str] | None = None, root: Path | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="List every pinned version and the newest release of each."
     )
@@ -502,7 +502,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--group", choices=GROUPS, help="check one group only")
     args = parser.parse_args(argv)
-    root = Path(__file__).resolve().parents[1]
+    root = root or Path(__file__).resolve().parents[1]
     pins = [p for p in find_pins(root) if args.group in (None, p.group)]
     rows = check(root, pins, ci_pythons(root))
     print(to_json(rows) if args.json else render_table(rows))
