@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-27
+
 ### Added
 
 - NetBird agent install for Linux VMs, with Docker (`netbird-agent/docker/`) or the native package; the setup key is read from a file in both.
@@ -37,5 +39,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A non-integer `schema_version` (for example `"1"`) is reported as a config error (exit 2) instead of a traceback.
 - `deploy.py` no longer exits on hosts without `git`; it warns and skips the check that `netbird.yaml` is not committed.
 
-[Unreleased]: https://github.com/terraapply/NetBird-Docker-Host/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/terraapply/NetBird-Docker-Host/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/terraapply/NetBird-Docker-Host/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/terraapply/NetBird-Docker-Host/releases/tag/v0.1.0
