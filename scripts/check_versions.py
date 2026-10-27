@@ -18,6 +18,8 @@ Groups:
   tooling  requirements-dev.txt and the .pre-commit-config.yaml hooks
   actions  uses: lines in .github/workflows/ and the newest CI Python
 
+Set GITHUB_TOKEN or GH_TOKEN to lift GitHub's anonymous rate limit.
+
 Exit codes:
   0  every lookup worked
   1  at least one lookup failed; the row says why
@@ -26,12 +28,22 @@ Exit codes:
 
 from __future__ import annotations
 
+import argparse
+import json
+import os
 import re
+import subprocess
+import sys
+import urllib.error
+import urllib.parse
+import urllib.request
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 NETBIRD = ("netbirdio/netbird-server", "netbirdio/dashboard", "netbirdio/netbird")
+GROUPS = ("netbird", "images", "tooling", "actions")
+PAIRS = (("ruff", "astral-sh/ruff-pre-commit"), ("yamllint", "adrienverge/yamllint"))
 
 EXAMPLE = "netbird-server/netbird.example.yaml"
 AGENT_COMPOSE = "netbird-agent/docker/docker-compose.yml"
@@ -197,3 +209,305 @@ def allows(spec: str | None, python: str) -> bool:
         if not ok:
             return False
     return True
+
+
+TIMEOUT = 20
+USER_AGENT = "NetBird-Docker-Host check_versions"
+DOCKER_HUB = "https://hub.docker.com/v2/namespaces"
+GITHUB_API = "https://api.github.com"
+PYTHON_MANIFEST = (
+    "https://raw.githubusercontent.com/actions/python-versions/main/"
+    "versions-manifest.json"
+)
+MANIFEST_TYPES = ", ".join(
+    (
+        "application/vnd.oci.image.index.v1+json",
+        "application/vnd.docker.distribution.manifest.list.v2+json",
+        "application/vnd.docker.distribution.manifest.v2+json",
+        "application/vnd.oci.image.manifest.v1+json",
+    )
+)
+NEXT_LINK = re.compile(r'<([^>]+)>;\s*rel="next"')
+NOT_LOCATIONS = ("CHANGELOG.md", "tests/test_check_versions.py")
+SUFFIX = re.compile(r"-[A-Za-z][\w.-]*$")
+NOTES = {
+    "netbirdio/netbird-server": "https://github.com/netbirdio/netbird/releases",
+    "netbirdio/netbird": "https://github.com/netbirdio/netbird/releases",
+    "netbirdio/dashboard": "https://github.com/netbirdio/dashboard/releases",
+    "traefik": "https://github.com/traefik/traefik/releases",
+    "ghcr.io/dexidp/dex": "https://github.com/dexidp/dex/releases",
+    "postgres": "https://www.postgresql.org/docs/release/",
+    "python": "https://docs.python.org/3/whatsnew/",
+}
+POSTGRES_NOTE = "never applied: a Postgres major cannot start on the old data directory"
+RATE_LIMIT = (
+    "HTTP {code} from GitHub: set GITHUB_TOKEN or GH_TOKEN to lift the anonymous "
+    "rate limit"
+)
+
+
+def _request(url: str, headers: dict | None = None, method: str = "GET"):
+    request = urllib.request.Request(
+        url, headers={"User-Agent": USER_AGENT, **(headers or {})}, method=method
+    )
+    with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
+        body = response.read()
+        link = NEXT_LINK.search(response.headers.get("Link", ""))
+    following = urllib.parse.urljoin(url, link.group(1)) if link else None
+    return (json.loads(body) if body else None), following
+
+
+def _github_headers() -> dict:
+    headers = {"Accept": "application/vnd.github+json"}
+    if token := os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN"):
+        headers["Authorization"] = f"Bearer {token}"
+    return headers
+
+
+def _ghcr_auth(repo: str) -> dict:
+    data, _ = _request(f"https://ghcr.io/token?scope=repository:{repo}:pull")
+    return {"Authorization": f"Bearer {data['token']}"}
+
+
+def _docker_hub(image: str) -> str:
+    namespace, _, repo = image.rpartition("/")
+    return f"{DOCKER_HUB}/{namespace or 'library'}/repositories/{repo}/tags"
+
+
+def registry_tags(image: str, suffix: str = "") -> list[str]:
+    tags = []
+    if image.startswith("ghcr.io/"):
+        repo = image.removeprefix("ghcr.io/")
+        auth = _ghcr_auth(repo)
+        url = f"https://ghcr.io/v2/{repo}/tags/list?n=1000"
+        for _ in range(20):
+            data, url = _request(url, auth)
+            tags += data.get("tags") or []
+            if not url:
+                break
+        return tags
+    query = {"page_size": 100, "ordering": "last_updated"}
+    if suffix:
+        query["name"] = suffix
+    url = f"{_docker_hub(image)}?{urllib.parse.urlencode(query)}"
+    for _ in range(10):
+        data, _ = _request(url)
+        tags += [result["name"] for result in data["results"]]
+        url = data.get("next")
+        if not url:
+            break
+    return tags
+
+
+def image_exists(image: str, tag: str) -> bool:
+    try:
+        if image.startswith("ghcr.io/"):
+            repo = image.removeprefix("ghcr.io/")
+            headers = {**_ghcr_auth(repo), "Accept": MANIFEST_TYPES}
+            _request(f"https://ghcr.io/v2/{repo}/manifests/{tag}", headers, "HEAD")
+        else:
+            _request(f"{_docker_hub(image)}/{urllib.parse.quote(tag)}")
+    except urllib.error.HTTPError as exc:
+        if exc.code == 404:
+            return False
+        raise
+    return True
+
+
+def pypi_releases(name: str) -> dict[str, str | None]:
+    data, _ = _request(f"https://pypi.org/pypi/{name}/json")
+    releases = {}
+    for version, files in data["releases"].items():
+        live = [f for f in files if not f.get("yanked")]
+        if live:
+            releases[version] = live[0].get("requires_python")
+    return releases
+
+
+def github_tags(repo: str) -> list[str]:
+    tags, url = [], f"{GITHUB_API}/repos/{repo}/tags?per_page=100"
+    for _ in range(10):
+        data, url = _request(url, _github_headers())
+        tags += [tag["name"] for tag in data]
+        if not url:
+            break
+    return tags
+
+
+def python_versions() -> list[str]:
+    data, _ = _request(PYTHON_MANIFEST)
+    stable = {".".join(v["version"].split(".")[:2]) for v in data if v.get("stable")}
+    return sorted(stable, key=version_key)
+
+
+def locations(root: Path, text: str) -> list[str]:
+    command = ["git", "-C", str(root), "grep", "-n", "-F", "-e", text]
+    command += ["--", ".", *(f":(exclude){rel}" for rel in NOT_LOCATIONS)]
+    try:
+        result = subprocess.run(command, capture_output=True, text=True)
+    except OSError:
+        return []
+    if result.returncode != 0:
+        return []
+    return [":".join(ln.split(":", 2)[:2]) for ln in result.stdout.splitlines()]
+
+
+@dataclass
+class Row:
+    pin: Pin
+    candidates: list[str] = field(default_factory=list)
+    apply: bool = True
+    notes: list[str] = field(default_factory=list)
+    error: str = ""
+    exists: bool | None = None
+    locations: list[str] = field(default_factory=list)
+    release_notes: str = ""
+
+    @property
+    def newest(self) -> str:
+        return self.candidates[-1] if self.candidates else ""
+
+    @property
+    def jump(self) -> str:
+        return jump(self.pin.current, self.newest) if self.newest else ""
+
+
+def release_notes(pin: Pin) -> str:
+    if pin.source == "pypi":
+        return f"https://pypi.org/project/{pin.name}/#history"
+    if pin.source == "github":
+        return f"https://github.com/{pin.name}/releases"
+    return NOTES.get(pin.name, "")
+
+
+def _lookup(row: Row, pythons: list[str]) -> None:
+    pin = row.pin
+    if pin.source == "image":
+        suffix = m.group(0) if (m := SUFFIX.search(pin.current)) else ""
+        row.candidates = candidates(pin.current, registry_tags(pin.name, suffix=suffix))
+        row.exists = image_exists(pin.name, pin.current)
+    elif pin.source == "pypi":
+        checked = [py for py in pythons if allows(pin.marker, py)]
+        offered = []
+        for version, spec in pypi_releases(pin.name).items():
+            if all(allows(spec, py) for py in checked):
+                offered.append(version)
+            elif candidates(pin.current, [version]):
+                row.notes.append(f"{version} not offered: needs Python {spec}")
+        row.candidates = candidates(pin.current, offered)
+    elif pin.source == "github":
+        row.candidates = candidates(pin.current, github_tags(pin.name))
+    else:
+        row.candidates = candidates(pin.current, python_versions())
+
+
+def _cross_checks(rows: list[Row]) -> None:
+    ok = {row.pin.name: row for row in rows if not row.error}
+    server, client = ok.get("netbirdio/netbird-server"), ok.get("netbirdio/netbird")
+    if server and client:
+        both = sorted(set(server.candidates) & set(client.candidates), key=version_key)
+        server.candidates, client.candidates = list(both), list(both)
+        versions = server.pin.current, client.pin.current
+        if versions[0] != versions[1]:
+            note = "server and client differ: {} vs {}".format(*versions)
+            server.notes.append(note)
+            client.notes.append(note)
+    postgres = ok.get("postgres")
+    if postgres and any(
+        jump(postgres.pin.current, c) == "major" for c in postgres.candidates
+    ):
+        postgres.apply = False
+        postgres.notes.append(POSTGRES_NOTE)
+    for a, b in PAIRS:
+        if a in ok and b in ok:
+            left, right = ok[a].pin.current, ok[b].pin.current
+            if left.removeprefix("v") != right.removeprefix("v"):
+                ok[a].notes.append(f"must match {b} {right}")
+                ok[b].notes.append(f"must match {a} {left}")
+
+
+def check(root: Path, pins: list[Pin], pythons: list[str]) -> list[Row]:
+    rows = []
+    for pin in pins:
+        row = Row(pin, locations=locations(root, pin.current))
+        row.release_notes = release_notes(pin)
+        try:
+            _lookup(row, pythons)
+        except urllib.error.HTTPError as exc:
+            limited = pin.source == "github" and exc.code in (403, 429)
+            row.error = RATE_LIMIT.format(code=exc.code) if limited else str(exc)
+        except (urllib.error.URLError, OSError, ValueError, KeyError) as exc:
+            row.error = str(exc)
+        rows.append(row)
+    _cross_checks(rows)
+    return rows
+
+
+def _notes(row: Row) -> str:
+    notes = list(row.notes)
+    if row.exists is False:
+        notes.append("current tag not found in registry")
+    if row.error:
+        notes.append(f"error: {row.error}")
+    return "; ".join(notes)
+
+
+def render_table(rows: list[Row]) -> str:
+    table = [("GROUP", "NAME", "CURRENT", "NEWEST", "JUMP", "APPLY", "NOTES")]
+    for row in rows:
+        pin = row.pin
+        apply = "yes" if row.apply else "no"
+        newest, kind = row.newest or "-", row.jump or "-"
+        table.append(
+            (pin.group, pin.name, pin.current, newest, kind, apply, _notes(row))
+        )
+    widths = [max(len(line[i]) for line in table) for i in range(6)]
+    return "\n".join(
+        "  ".join(
+            [*(c.ljust(w) for c, w in zip(line[:6], widths, strict=True)), line[6]]
+        ).rstrip()
+        for line in table
+    )
+
+
+def to_json(rows: list[Row]) -> str:
+    return json.dumps(
+        [
+            {
+                "group": row.pin.group,
+                "name": row.pin.name,
+                "current": row.pin.current,
+                "newest": row.newest,
+                "jump": row.jump,
+                "apply": row.apply,
+                "candidates": row.candidates,
+                "notes": row.notes,
+                "error": row.error,
+                "exists": row.exists,
+                "locations": row.locations,
+                "release_notes": row.release_notes,
+            }
+            for row in rows
+        ],
+        indent=2,
+    )
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        description="List every pinned version and the newest release of each."
+    )
+    parser.add_argument(
+        "--json", action="store_true", help="print JSON, with where each version is"
+    )
+    parser.add_argument("--group", choices=GROUPS, help="check one group only")
+    args = parser.parse_args(argv)
+    root = Path(__file__).resolve().parents[1]
+    pins = [p for p in find_pins(root) if args.group in (None, p.group)]
+    rows = check(root, pins, ci_pythons(root))
+    print(to_json(rows) if args.json else render_table(rows))
+    return 1 if any(row.error for row in rows) else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

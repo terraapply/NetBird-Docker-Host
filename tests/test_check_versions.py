@@ -1,8 +1,11 @@
 """Tests for scripts/check_versions.py. No network: every lookup is faked."""
 
 import importlib.util
+import json
 import re
 import sys
+import urllib.error
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -147,3 +150,167 @@ def test_jump(current, new, kind):
 )
 def test_allows(spec, python, ok):
     assert cv.allows(spec, python) is ok
+
+
+FAKE_TAGS = {
+    "netbirdio/netbird-server": ["0.77.0", "0.78.0", "0.79.0", "0.79.0-rc.1", "latest"],
+    "netbirdio/netbird": ["0.77.0", "0.78.0"],
+    "netbirdio/dashboard": ["v2.91.1", "v2.92.0"],
+    "traefik": ["v3.6", "v3.7", "v3.7.1"],
+    "ghcr.io/dexidp/dex": ["v2.45.1", "v2.46.0", "v2.46.0-alpine"],
+    "postgres": ["17-alpine", "18-alpine", "18.1-alpine"],
+}
+FAKE_PYPI = {
+    "pytest": {"9.1.1": ">=3.10", "9.2.0": ">=3.11"},
+    "pre-commit": {"4.7.0": ">=3.10", "4.8.0": ">=3.11"},
+}
+FAKE_GITHUB = {"actions/checkout": ["v7", "v7.0.1", "v8"]}
+
+
+@pytest.fixture
+def lookups(monkeypatch):
+    fake = {
+        "tags": dict(FAKE_TAGS),
+        "pypi": dict(FAKE_PYPI),
+        "github": dict(FAKE_GITHUB),
+        "python": {},
+        "missing": set(),
+        "fail": {},
+        "fail_all": None,
+    }
+
+    def call(kind, key, default):
+        if fake["fail_all"]:
+            raise fake["fail_all"]
+        if key in fake["fail"]:
+            raise fake["fail"][key]
+        return fake[kind].get(key, default)
+
+    def exists(image, tag):
+        if fake["fail_all"]:
+            raise fake["fail_all"]
+        return (image, tag) not in fake["missing"]
+
+    monkeypatch.setattr(
+        cv, "registry_tags", lambda image, suffix="": call("tags", image, [])
+    )
+    monkeypatch.setattr(cv, "image_exists", exists)
+    monkeypatch.setattr(cv, "pypi_releases", lambda name: call("pypi", name, {}))
+    monkeypatch.setattr(cv, "github_tags", lambda repo: call("github", repo, []))
+    monkeypatch.setattr(
+        cv,
+        "python_versions",
+        lambda: call("python", "python", ["3.10", "3.12", "3.13", "3.14"]),
+    )
+    return fake
+
+
+def rows(pins=None):
+    pins = cv.find_pins(REPO_ROOT) if pins is None else pins
+    checked = cv.check(REPO_ROOT, pins, cv.ci_pythons(REPO_ROOT))
+    return {r.pin.name: r for r in checked}
+
+
+def changed(name, current):
+    return [
+        replace(p, current=current) if p.name == name else p
+        for p in cv.find_pins(REPO_ROOT)
+    ]
+
+
+def test_netbird_target_needs_server_and_client(lookups):
+    r = rows()
+    assert r["netbirdio/netbird-server"].candidates == ["0.78.0"]
+    assert r["netbirdio/netbird"].candidates == ["0.78.0"]
+    assert r["netbirdio/netbird-server"].jump == "major"
+
+
+def test_dashboard_has_its_own_tag(lookups):
+    assert rows()["netbirdio/dashboard"].newest == "v2.92.0"
+
+
+def test_postgres_major_is_never_applied(lookups):
+    row = rows()["postgres"]
+    assert row.newest == "18-alpine"
+    assert row.apply is False
+    assert any("data directory" in n for n in row.notes)
+
+
+def test_release_that_drops_a_ci_python_is_not_offered(lookups):
+    row = rows()["pytest"]
+    assert row.candidates == []
+    assert any("9.2.0" in n and ">=3.11" in n for n in row.notes)
+
+
+def test_marker_limits_the_pythons_checked(lookups):
+    assert rows()["pre-commit"].candidates == ["4.8.0"]
+
+
+def test_newest_ci_python_moves(lookups):
+    assert rows()["python"].candidates == ["3.13", "3.14"]
+
+
+def test_server_and_client_mismatch_is_flagged(lookups):
+    r = rows(changed("netbirdio/netbird", "0.76.0"))
+    for name in ("netbirdio/netbird-server", "netbirdio/netbird"):
+        assert any("0.76.0" in n and "0.77.0" in n for n in r[name].notes)
+
+
+def test_lint_tool_pair_mismatch_is_flagged(lookups):
+    r = rows(changed("astral-sh/ruff-pre-commit", "v0.17.1"))
+    assert any("v0.17.1" in n for n in r["ruff"].notes)
+    assert any("0.17.2" in n for n in r["astral-sh/ruff-pre-commit"].notes)
+
+
+def test_missing_current_tag_is_flagged(lookups, capsys):
+    lookups["missing"].add(("ghcr.io/dexidp/dex", "v2.45.1"))
+    assert rows()["ghcr.io/dexidp/dex"].exists is False
+    cv.main(["--group", "images"])
+    assert "not found" in capsys.readouterr().out
+
+
+def test_failed_lookup_is_an_error_row(lookups, capsys):
+    lookups["fail"]["traefik"] = urllib.error.URLError("timed out")
+    assert cv.main(["--group", "images"]) == 1
+    out = capsys.readouterr().out
+    assert "timed out" in out
+    assert "ghcr.io/dexidp/dex" in out
+
+
+def test_offline_run_prints_valid_json(lookups, capsys):
+    lookups["fail_all"] = urllib.error.URLError("no network")
+    assert cv.main(["--json"]) == 1
+    data = json.loads(capsys.readouterr().out)
+    assert data and all(row["error"] for row in data)
+
+
+def test_rate_limit_hints_at_token(lookups, capsys):
+    lookups["fail"]["actions/checkout"] = urllib.error.HTTPError(
+        "https://api.github.com/repos/actions/checkout/tags",
+        403,
+        "rate limit",
+        None,
+        None,
+    )
+    assert cv.main(["--group", "actions"]) == 1
+    assert "GITHUB_TOKEN" in capsys.readouterr().out
+
+
+def test_json_lists_where_each_version_appears(lookups, capsys):
+    assert cv.main(["--json", "--group", "netbird"]) == 0
+    data = {row["name"]: row for row in json.loads(capsys.readouterr().out)}
+    assert set(data) == set(cv.NETBIRD)
+    locs = data["netbirdio/netbird-server"]["locations"]
+    assert any(loc.startswith("README.md:") for loc in locs)
+    assert any(loc.startswith("netbird-server/netbird.example.yaml:") for loc in locs)
+    assert not any(loc.startswith("CHANGELOG.md:") for loc in locs)
+    assert (
+        data["netbirdio/dashboard"]["release_notes"]
+        == "https://github.com/netbirdio/dashboard/releases"
+    )
+
+
+def test_locations_skip_this_scripts_fake_data():
+    locs = cv.locations(REPO_ROOT, "0.77.0")
+    assert any(loc.startswith("README.md:") for loc in locs)
+    assert not any(loc.startswith("tests/test_check_versions.py:") for loc in locs)
