@@ -1,5 +1,6 @@
 """Tests for scripts/check_versions.py. No network: every lookup is faked."""
 
+import http.client
 import importlib.util
 import json
 import re
@@ -383,3 +384,19 @@ def test_config_comments_name_no_netbird_version():
             if ln.lstrip().startswith("#")
         ]
         assert not any(version in ln for ln in comments), rel
+
+
+def test_action_locations_name_the_action(lookups, fake_repo):
+    r = rows(fake_repo)
+    locs = r["actions/checkout"].locations
+    assert len(locs) == 1
+    assert locs[0].startswith(".github/workflows/ci.yml:")
+    assert r["python"].locations
+
+
+def test_broken_response_is_an_error_row(lookups, fake_repo, capsys):
+    lookups["fail"]["traefik"] = http.client.IncompleteRead(b"")
+    lookups["fail"]["ghcr.io/dexidp/dex"] = TypeError("not subscriptable")
+    lookups["fail"]["postgres"] = AttributeError("no attribute 'get'")
+    assert cv.main(["--group", "images"], root=fake_repo) == 1
+    assert capsys.readouterr().out.count("error:") == 3

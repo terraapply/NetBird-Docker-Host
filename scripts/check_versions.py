@@ -29,6 +29,7 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
+import http.client
 import json
 import os
 import re
@@ -429,14 +430,24 @@ def _cross_checks(rows: list[Row]) -> None:
 def check(root: Path, pins: list[Pin], pythons: list[str]) -> list[Row]:
     rows = []
     for pin in pins:
-        row = Row(pin, locations=locations(root, pin.current))
+        action = pin.group == "actions" and pin.source == "github"
+        text = f"{pin.name}@{pin.current}" if action else pin.current
+        row = Row(pin, locations=locations(root, text))
         row.release_notes = release_notes(pin)
         try:
             _lookup(row, pythons)
         except urllib.error.HTTPError as exc:
             limited = pin.source == "github" and exc.code in (403, 429)
             row.error = RATE_LIMIT.format(code=exc.code) if limited else str(exc)
-        except (urllib.error.URLError, OSError, ValueError, KeyError) as exc:
+        except (
+            urllib.error.URLError,
+            http.client.HTTPException,
+            OSError,
+            ValueError,
+            KeyError,
+            TypeError,
+            AttributeError,
+        ) as exc:
             row.error = str(exc)
         rows.append(row)
     _cross_checks(rows)
