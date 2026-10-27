@@ -46,7 +46,7 @@ staticClients:
     secret: "${NETBIRD_OIDC_CLIENT_SECRET}"
     # oidc.redirect_uri in netbird.yaml. The default,
     # https://<domains.netbird>/oauth2/callback, is exactly what
-    # netbird-server 0.77.0 sends, with no connector ID appended. Dex matches
+    # netbird-server sends, with no connector ID appended. Dex matches
     # redirect URIs by exact string, so a trailing component (or even a
     # trailing slash) fails with "Unregistered redirect_uri". Check the
     # redirect_uri= value in the Dex log before overriding it.

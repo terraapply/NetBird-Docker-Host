@@ -19,14 +19,19 @@ READMES = (
     REPO_ROOT / "netbird-server" / "README.md",
     REPO_ROOT / "netbird-agent" / "README.md",
 )
+CONTRIBUTING = REPO_ROOT / "CONTRIBUTING.md"
 
-SKILLS = (
+DEPLOY_SKILLS = (
     "netbird-install-server",
     "netbird-install-agent",
     "netbird-maintain",
     "netbird-troubleshoot",
     "netbird-extend",
 )
+# Repo skills change this repository, not a deployment: their procedures live
+# in CONTRIBUTING.md instead of a README.
+REPO_SKILLS = ("auto-upgrade", "release-guru")
+SKILLS = DEPLOY_SKILLS + REPO_SKILLS
 
 # Files an agent never opens: whatever it reads is sent to the AI provider.
 SECRET_PATHS = (
@@ -139,7 +144,7 @@ def test_skill_starts_with_where_am_i(name):
     assert "AGENTS.md#where-am-i" in skill_text(name)
 
 
-@pytest.mark.parametrize("name", SKILLS)
+@pytest.mark.parametrize("name", DEPLOY_SKILLS)
 def test_skill_links_a_readme(name):
     assert README_LINK.search(skill_text(name))
 
@@ -152,7 +157,8 @@ def test_skill_never_puts_setup_key_on_command_line(name):
 @pytest.mark.parametrize("name", SKILLS)
 def test_skill_does_not_copy_readme_blocks(name):
     # A copied procedure drifts from the README it came from; link it instead.
-    readme_blocks = [b for doc in READMES for b in fenced_blocks(doc.read_text())]
+    docs = (*READMES, CONTRIBUTING)
+    readme_blocks = [b for doc in docs for b in fenced_blocks(doc.read_text())]
     copied = [
         block
         for block in fenced_blocks(skill_text(name))
@@ -306,3 +312,91 @@ def test_install_server_gates_accept_healthy_setups():
 def test_agents_md_local_auth_needs_proven_sso():
     confirm = section(AGENTS_MD.read_text(), "Confirm or refuse")
     assert "#prove-it-works" in confirm
+
+
+@pytest.mark.parametrize("name", REPO_SKILLS)
+def test_repo_skill_links_contributing_and_confirmation(name):
+    text = skill_text(name)
+    assert "CONTRIBUTING.md#" in text
+    assert "AGENTS.md#confirm-or-refuse" in text
+
+
+def test_auto_upgrade_drives_the_script_safely():
+    text = skill_text("auto-upgrade")
+    for needle in (
+        "scripts/check_versions.py",
+        "--json",
+        "#keeping-versions-current",
+        "viewerPermission",
+        "netbird-server/.env",
+        "git add -A",
+        "gh pr checks",
+        "pull_request_template.md",
+        "netbird-extend",
+        "netbird-maintain",
+        "data directory",
+        "test_client_matches_server_release",
+    ):
+        assert needle in text
+
+
+def test_extend_points_version_bumps_at_auto_upgrade():
+    assert "auto-upgrade" in skill_text("netbird-extend")
+
+
+def test_release_guru_cuts_from_the_changelog():
+    text = skill_text("release-guru")
+    for needle in (
+        "#releasing",
+        "## [Unreleased]",
+        "release.yml",
+        "viewerPermission",
+        "netbird-server/.env",
+        "1.0.0",
+        "mergeCommit",
+        "git tag -a",
+        "gh release view",
+    ):
+        assert needle in text
+
+
+def test_agents_md_guards_pushed_tags():
+    confirm = section(AGENTS_MD.read_text(), "Confirm or refuse")
+    assert "pushed tag" in confirm
+
+
+def test_release_guru_routes_each_sitting():
+    text = skill_text("release-guru")
+    start = section(text, "Before you start")
+    assert "git describe" not in start
+    assert "release/` branch" not in start
+    assert "git describe" in section(text, "Prepare")
+    router = section(text, "Which sitting")
+    for anchor in ("#prepare", "#while-the-pull-request-is-open", "#publish"):
+        assert anchor in router
+
+
+def test_release_guru_watches_the_release_run():
+    text = skill_text("release-guru")
+    assert "--workflow release.yml" in text
+    assert "gh run watch <id> --exit-status" in text
+    assert "`gh run watch`" not in text
+
+
+def test_upgrade_recheck_allows_held_rows():
+    keeping = section(CONTRIBUTING.read_text(), "Keeping versions current")
+    assert "no notes" not in keeping
+    assert "`must match`" in keeping
+    assert "nothing newer than" not in skill_text("auto-upgrade")
+    assert "APPLY no" in section(skill_text("auto-upgrade"), "3. One group, one branch")
+
+
+@pytest.mark.parametrize("name", REPO_SKILLS)
+def test_repo_skill_pushes_rebased_branches_safely(name):
+    assert "--force-with-lease" in skill_text(name)
+
+
+def test_release_guru_keeps_the_branch_name():
+    text = skill_text("release-guru")
+    assert "keep the branch name" in text
+    assert "and branch name to match" not in text
