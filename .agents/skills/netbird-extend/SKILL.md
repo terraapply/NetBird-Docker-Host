@@ -36,7 +36,7 @@ Read the code and its tests before changing either. Follow [CONTRIBUTING.md](../
 
 **A `deploy.py` bug fix** starts with a test that fails without the fix. Keep its message style: lowercase `error:` and `warn:`, and every failure says how to fix it.
 
-**A NetBird version bump** moves three images together: `netbirdio/netbird-server` and `netbirdio/dashboard` in `netbird.example.yaml`, and `netbirdio/netbird` in `netbird-agent/docker/docker-compose.yml`. The test `test_client_matches_server_release` in `netbird-agent/tests/test_agent_compose.py` enforces that the server and client match. Renovate groups them the same way.
+**A NetBird version bump** moves three images together: `netbirdio/netbird-server` and `netbirdio/dashboard` in `netbird.example.yaml`, and `netbirdio/netbird` in `netbird-agent/docker/docker-compose.yml`. The test `test_client_matches_server_release` in `netbird-agent/tests/test_agent_compose.py` enforces that the server and client match. Renovate groups them the same way. To find and apply new versions across the repo, use [auto-upgrade](../auto-upgrade/SKILL.md) instead of editing by hand.
 
 **A changed procedure** goes into the README first and the matching skill in `.agents/skills/` second. Skills link to the README, never copy it.
 

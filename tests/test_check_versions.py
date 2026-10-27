@@ -314,3 +314,19 @@ def test_locations_skip_this_scripts_fake_data():
     locs = cv.locations(REPO_ROOT, "0.77.0")
     assert any(loc.startswith("README.md:") for loc in locs)
     assert not any(loc.startswith("tests/test_check_versions.py:") for loc in locs)
+
+
+def test_config_comments_name_no_netbird_version():
+    example = REPO_ROOT / "netbird-server" / "netbird.example.yaml"
+    tag = yaml.safe_load(example.read_text())["images"]["netbird_server"]
+    version = tag.rsplit(":", 1)[1]
+    for rel in (
+        "netbird-server/netbird.example.yaml",
+        "netbird-server/template/dex.config.yaml.tmpl",
+    ):
+        comments = [
+            ln
+            for ln in (REPO_ROOT / rel).read_text().splitlines()
+            if ln.lstrip().startswith("#")
+        ]
+        assert not any(version in ln for ln in comments), rel

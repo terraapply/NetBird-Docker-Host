@@ -343,3 +343,14 @@ def test_server_readme_rotation_names_both_exceptions():
     rotation = doc_section(SERVER_README, "### Rotating secrets")
     assert "- **`postgres.password`**" not in rotation
     assert "**`postgres.password`**" in rotation
+
+
+def test_contributing_keeps_versions_current():
+    section = doc_section(REPO_ROOT / "CONTRIBUTING.md", "## Keeping versions current")
+    for needle in ("scripts/check_versions.py", "data directory", "3.10", "dashboard"):
+        assert needle in section
+
+
+def test_readme_lists_the_version_script():
+    assert "scripts/" in doc_section(ROOT_README, "## Repository layout")
+    assert "scripts/check_versions.py" in doc_section(ROOT_README, "## Tech stack")

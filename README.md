@@ -75,7 +75,7 @@ The server VM runs five containers: `traefik` (TLS and routing), `netbird-server
 | NetBird client | WireGuard peer | Docker container or native package on each agent VM |
 | `deploy.py` | Renders configs, starts the stack, runs the checks | Python 3.10+ with PyYAML on the server VM |
 
-Every image is pinned to an exact tag in [`netbird-server/netbird.example.yaml`](netbird-server/netbird.example.yaml) and [`netbird-agent/docker/docker-compose.yml`](netbird-agent/docker/docker-compose.yml); Renovate keeps them current.
+Every image is pinned to an exact tag in [`netbird-server/netbird.example.yaml`](netbird-server/netbird.example.yaml) and [`netbird-agent/docker/docker-compose.yml`](netbird-agent/docker/docker-compose.yml); [`scripts/check_versions.py`](scripts/check_versions.py) lists newer releases, and Renovate or the [auto-upgrade](.agents/skills/auto-upgrade/SKILL.md) skill opens the upgrade pull requests.
 
 ## Requirements
 
@@ -460,7 +460,7 @@ The exit code tells you how far `deploy.py` got:
 
 ## Using an AI agent
 
-This repository ships instructions for coding agents. [`AGENTS.md`](AGENTS.md) holds the rules every agent loads, and five skills cover the common jobs. They work in Claude Code, OpenCode, Codex and any other agent that reads `AGENTS.md`.
+This repository ships instructions for coding agents. [`AGENTS.md`](AGENTS.md) holds the rules every agent loads, and a skill covers each common job. They work in Claude Code, OpenCode, Codex and any other agent that reads `AGENTS.md`.
 
 | Skill | Use it to |
 |---|---|
@@ -469,6 +469,9 @@ This repository ships instructions for coding agents. [`AGENTS.md`](AGENTS.md) h
 | [netbird-maintain](.agents/skills/netbird-maintain/SKILL.md) | Back up, restore, upgrade, rotate secrets, re-key or remove agents |
 | [netbird-troubleshoot](.agents/skills/netbird-troubleshoot/SKILL.md) | Find and fix a problem on the server or an agent VM |
 | [netbird-extend](.agents/skills/netbird-extend/SKILL.md) | Add or change a feature, in the repository or in one deployment |
+| [auto-upgrade](.agents/skills/auto-upgrade/SKILL.md) | Check every version the repository pins and open upgrade pull requests |
+
+auto-upgrade works on this repository rather than a deployment, and needs push access to it.
 
 Start your agent inside a clone of this repository, on a laptop or on a VM. A VM with the native agent install has no clone; drive it from a clone elsewhere, where the agent hands you the commands to run, or clone the repository there.
 
@@ -481,6 +484,7 @@ Agents are told never to open `netbird.yaml`, the generated configs, setup keys 
 | [`netbird-server/`](netbird-server/README.md) | The control plane: `deploy.py`, the compose stack, templates and their reference docs |
 | [`netbird-agent/`](netbird-agent/README.md) | The NetBird client for agent VMs: the Docker install and its reference docs |
 | [`AGENTS.md`](AGENTS.md), [`.agents/skills/`](.agents/skills/) | Instructions and skills for coding agents |
+| [`scripts/`](scripts/check_versions.py) | `check_versions.py`: every pinned version and the newest release of each |
 | `tests/`, `netbird-*/tests/` | pytest suites, run by CI with ruff, yamllint and shellcheck |
 
 ## Contributing

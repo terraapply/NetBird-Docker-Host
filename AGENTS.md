@@ -12,6 +12,7 @@ A self-hosted [NetBird](https://netbird.io) network for Linux VMs: one VM runs t
 | `netbird-server/` | The control plane: five containers driven by `deploy.py` from one config file, `netbird.yaml`. [Its README](netbird-server/README.md) is the reference: how it works, day-2 operations, troubleshooting. |
 | `netbird-agent/` | The peer client, installed with Docker (`netbird-agent/docker/`) or natively. [Its README](netbird-agent/README.md) covers upgrade, uninstall and troubleshooting. |
 | `tests/`, `netbird-*/tests/` | pytest suites. No network; Docker tests skip when Docker is missing. |
+| `scripts/` | `check_versions.py`: every pinned version and the newest release of each. Read-only; needs network. |
 | `.agents/skills/` | Task skills, also reachable through `.claude/skills/`. |
 
 Overview: [README.md](README.md). Contribution rules: [CONTRIBUTING.md](CONTRIBUTING.md).
@@ -125,3 +126,4 @@ Each job has a skill in `.agents/skills/`. Load the one that fits before you sta
 | [netbird-maintain](.agents/skills/netbird-maintain/SKILL.md) | Health checks, backups, restore, upgrades, secret rotation, re-keying or removing agents |
 | [netbird-troubleshoot](.agents/skills/netbird-troubleshoot/SKILL.md) | Something is broken on the server or an agent VM: failed checks, login, certificates, peers |
 | [netbird-extend](.agents/skills/netbird-extend/SKILL.md) | Adding or changing a feature, in the repo or in one deployment |
+| [auto-upgrade](.agents/skills/auto-upgrade/SKILL.md) | Checking the repo's pinned versions for newer releases and opening upgrade PRs (upgrading a running server is netbird-maintain) |

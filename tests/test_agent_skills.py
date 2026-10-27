@@ -19,14 +19,19 @@ READMES = (
     REPO_ROOT / "netbird-server" / "README.md",
     REPO_ROOT / "netbird-agent" / "README.md",
 )
+CONTRIBUTING = REPO_ROOT / "CONTRIBUTING.md"
 
-SKILLS = (
+DEPLOY_SKILLS = (
     "netbird-install-server",
     "netbird-install-agent",
     "netbird-maintain",
     "netbird-troubleshoot",
     "netbird-extend",
 )
+# Repo skills change this repository, not a deployment: their procedures live
+# in CONTRIBUTING.md instead of a README.
+REPO_SKILLS = ("auto-upgrade",)
+SKILLS = DEPLOY_SKILLS + REPO_SKILLS
 
 # Files an agent never opens: whatever it reads is sent to the AI provider.
 SECRET_PATHS = (
@@ -139,7 +144,7 @@ def test_skill_starts_with_where_am_i(name):
     assert "AGENTS.md#where-am-i" in skill_text(name)
 
 
-@pytest.mark.parametrize("name", SKILLS)
+@pytest.mark.parametrize("name", DEPLOY_SKILLS)
 def test_skill_links_a_readme(name):
     assert README_LINK.search(skill_text(name))
 
@@ -152,7 +157,8 @@ def test_skill_never_puts_setup_key_on_command_line(name):
 @pytest.mark.parametrize("name", SKILLS)
 def test_skill_does_not_copy_readme_blocks(name):
     # A copied procedure drifts from the README it came from; link it instead.
-    readme_blocks = [b for doc in READMES for b in fenced_blocks(doc.read_text())]
+    docs = (*READMES, CONTRIBUTING)
+    readme_blocks = [b for doc in docs for b in fenced_blocks(doc.read_text())]
     copied = [
         block
         for block in fenced_blocks(skill_text(name))
@@ -306,3 +312,33 @@ def test_install_server_gates_accept_healthy_setups():
 def test_agents_md_local_auth_needs_proven_sso():
     confirm = section(AGENTS_MD.read_text(), "Confirm or refuse")
     assert "#prove-it-works" in confirm
+
+
+@pytest.mark.parametrize("name", REPO_SKILLS)
+def test_repo_skill_links_contributing_and_confirmation(name):
+    text = skill_text(name)
+    assert "CONTRIBUTING.md#" in text
+    assert "AGENTS.md#confirm-or-refuse" in text
+
+
+def test_auto_upgrade_drives_the_script_safely():
+    text = skill_text("auto-upgrade")
+    for needle in (
+        "scripts/check_versions.py",
+        "--json",
+        "#keeping-versions-current",
+        "viewerPermission",
+        "netbird-server/.env",
+        "git add -A",
+        "gh pr checks",
+        "pull_request_template.md",
+        "netbird-extend",
+        "netbird-maintain",
+        "data directory",
+        "test_client_matches_server_release",
+    ):
+        assert needle in text
+
+
+def test_extend_points_version_bumps_at_auto_upgrade():
+    assert "auto-upgrade" in skill_text("netbird-extend")

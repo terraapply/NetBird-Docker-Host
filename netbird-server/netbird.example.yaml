@@ -68,8 +68,8 @@ oidc:
   #   openssl rand -hex 32
   client_secret: ""
   # Defaults to https://<domains.netbird>/oauth2/callback, which is what
-  # netbird-server 0.77.0 sends. Dex matches this byte-for-byte, so override
-  # only if a Dex log tells you the server is sending something else.
+  # netbird-server sends. Dex matches this byte-for-byte, so override only if
+  # a Dex log tells you the server is sending something else.
   # redirect_uri: https://netbird.example.com/oauth2/callback
 
 server:
