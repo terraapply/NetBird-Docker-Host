@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `llms-install.md`: paste one line into Claude Code, Codex, Pi or OpenCode and the agent clones this repository, asks whether you want the server or an agent VM, and follows the matching install skill. The line and a launch command for each agent are under "Using an AI agent" in the README.
 
+### Changed
+
+- NetBird server and client 0.77.0 to 0.81.5, dashboard v2.91.1 to v2.96.0. Upgrade the server first, then move each agent to 0.81.5. Remote debug bundles requested from the dashboard now run on a peer only if its client opts in with `--allow-remote-jobs`.
+
 ## [0.2.0] - 2026-10-27
 
 ### Added

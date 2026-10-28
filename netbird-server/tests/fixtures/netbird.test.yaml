@@ -18,8 +18,8 @@ github:
 
 images:
   traefik: traefik:v3.6
-  netbird_server: netbirdio/netbird-server:0.77.0
-  dashboard: netbirdio/dashboard:v2.91.1
+  netbird_server: netbirdio/netbird-server:0.81.5
+  dashboard: netbirdio/dashboard:v2.96.0
   dex: ghcr.io/dexidp/dex:v2.45.1
   postgres: postgres:17-alpine
 

@@ -8,7 +8,7 @@
 [![Release](https://img.shields.io/github/v/release/terraapply/NetBird-Docker-Host?style=flat-square)](https://github.com/terraapply/NetBird-Docker-Host/releases)
 [![License: MIT](https://img.shields.io/github/license/terraapply/NetBird-Docker-Host?style=flat-square)](LICENSE)
 
-[![NetBird 0.77.0](https://img.shields.io/badge/NetBird-0.77.0-blue?style=flat-square)](netbird-server/netbird.example.yaml)
+[![NetBird 0.81.5](https://img.shields.io/badge/NetBird-0.81.5-blue?style=flat-square)](netbird-server/netbird.example.yaml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue?style=flat-square&logo=python&logoColor=white)](CONTRIBUTING.md#setup)
 [![Docker Compose v2](https://img.shields.io/badge/docker_compose-v2-blue?style=flat-square&logo=docker&logoColor=white)](https://docs.docker.com/compose/)
 
@@ -372,7 +372,7 @@ Run the same NetBird release on the agents as on the server. An agent newer than
 Find the server's release on the server VM, from `netbird-server/`:
 
 ```bash
-./deploy.py config | grep NETBIRD_SERVER_IMAGE   # the tag after the colon, for example 0.77.0
+./deploy.py config | grep NETBIRD_SERVER_IMAGE   # the tag after the colon, for example 0.81.5
 ```
 
 If you do not run the server, ask whoever does.
@@ -382,7 +382,7 @@ Docker: compare it with the `image:` line in `netbird-agent/docker/docker-compos
 Native: install the server's release and hold it, so a routine `apt upgrade` does not move it past the server:
 
 ```bash
-sudo apt-get install --allow-downgrades netbird=0.77.0   # the server's release
+sudo apt-get install --allow-downgrades netbird=0.81.5   # the server's release
 sudo apt-mark hold netbird
 netbird version
 ```
