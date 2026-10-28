@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - NetBird server and client 0.77.0 to 0.81.5, dashboard v2.91.1 to v2.96.0. Upgrade the server first, then move each agent to 0.81.5. Remote debug bundles requested from the dashboard now run on a peer only if its client opts in with `--allow-remote-jobs`.
+- Traefik v3.6 to v3.7 and Dex v2.45.1 to v2.46.1. No change to `netbird.yaml` is needed; run `./deploy.py` after pulling to switch. Postgres stays on 17: a new major cannot start on the old data directory.
 
 ## [0.2.0] - 2026-10-27
 
