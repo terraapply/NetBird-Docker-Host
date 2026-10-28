@@ -17,10 +17,10 @@ github:
   client_secret: "1111111111111111111111111111111111111111111111111111111111111111"
 
 images:
-  traefik: traefik:v3.6
+  traefik: traefik:v3.7
   netbird_server: netbirdio/netbird-server:0.81.5
   dashboard: netbirdio/dashboard:v2.96.0
-  dex: ghcr.io/dexidp/dex:v2.45.1
+  dex: ghcr.io/dexidp/dex:v2.46.1
   postgres: postgres:17-alpine
 
 postgres:
