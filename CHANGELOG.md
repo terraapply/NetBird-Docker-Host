@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-28
+
 ### Added
 
 - `llms-install.md`: paste one line into Claude Code, Codex, Pi or OpenCode and the agent clones this repository, asks whether you want the server or an agent VM, and follows the matching install skill. The line and a launch command for each agent are under "Using an AI agent" in the README.
@@ -48,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A non-integer `schema_version` (for example `"1"`) is reported as a config error (exit 2) instead of a traceback.
 - `deploy.py` no longer exits on hosts without `git`; it warns and skips the check that `netbird.yaml` is not committed.
 
-[Unreleased]: https://github.com/terraapply/NetBird-Docker-Host/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/terraapply/NetBird-Docker-Host/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/terraapply/NetBird-Docker-Host/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/terraapply/NetBird-Docker-Host/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/terraapply/NetBird-Docker-Host/releases/tag/v0.1.0
