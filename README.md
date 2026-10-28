@@ -460,7 +460,28 @@ The exit code tells you how far `deploy.py` got:
 
 ## Using an AI agent
 
-This repository ships instructions for coding agents. [`AGENTS.md`](AGENTS.md) holds the rules every agent loads, and a skill covers each common job. They work in Claude Code, OpenCode, Codex and any other agent that reads `AGENTS.md`.
+Paste this line into your coding agent and it installs NetBird for you:
+
+```text
+Download https://raw.githubusercontent.com/terraapply/NetBird-Docker-Host/main/llms-install.md with curl and follow it.
+```
+
+The agent clones this repository, works out whether it runs on a VM or on your laptop, asks whether you want the server or an agent VM, and follows the matching skill below. It stops wherever you need to confirm a step or type a secret. The steps it follows are in [`llms-install.md`](llms-install.md).
+
+Or start your agent with the line, in the directory where the clone should go (your home directory on the VM, for example):
+
+```bash
+# Claude Code
+claude "Download https://raw.githubusercontent.com/terraapply/NetBird-Docker-Host/main/llms-install.md with curl and follow it."
+# Codex
+codex "Download https://raw.githubusercontent.com/terraapply/NetBird-Docker-Host/main/llms-install.md with curl and follow it."
+# Pi
+pi "Download https://raw.githubusercontent.com/terraapply/NetBird-Docker-Host/main/llms-install.md with curl and follow it."
+# OpenCode
+opencode --prompt "Download https://raw.githubusercontent.com/terraapply/NetBird-Docker-Host/main/llms-install.md with curl and follow it."
+```
+
+This repository ships instructions for coding agents. [`AGENTS.md`](AGENTS.md) holds the rules every agent loads, and a skill covers each common job. They work in Claude Code, OpenCode, Codex, Pi and any other agent that reads `AGENTS.md`.
 
 | Skill | Use it to |
 |---|---|
@@ -474,7 +495,7 @@ This repository ships instructions for coding agents. [`AGENTS.md`](AGENTS.md) h
 
 auto-upgrade and release-guru work on this repository rather than a deployment, and need push access to it.
 
-Start your agent inside a clone of this repository, on a laptop or on a VM. A VM with the native agent install has no clone; drive it from a clone elsewhere, where the agent hands you the commands to run, or clone the repository there.
+After the first install, start your agent inside the clone, on a laptop or on a VM. A VM with the native agent install has no clone; drive it from a clone elsewhere, where the agent hands you the commands to run, or clone the repository there.
 
 Agents are told never to open `netbird.yaml`, the generated configs, setup keys or backups, because whatever an agent reads is sent to its AI provider. Do not paste secrets into the chat either.
 
@@ -485,6 +506,7 @@ Agents are told never to open `netbird.yaml`, the generated configs, setup keys 
 | [`netbird-server/`](netbird-server/README.md) | The control plane: `deploy.py`, the compose stack, templates and their reference docs |
 | [`netbird-agent/`](netbird-agent/README.md) | The NetBird client for agent VMs: the Docker install and its reference docs |
 | [`AGENTS.md`](AGENTS.md), [`.agents/skills/`](.agents/skills/) | Instructions and skills for coding agents |
+| [`llms-install.md`](llms-install.md) | The one-line install for coding agents: clone, pick the role, follow the install skill |
 | [`scripts/`](scripts/check_versions.py) | `check_versions.py`: every pinned version and the newest release of each |
 | `tests/`, `netbird-*/tests/` | pytest suites, run by CI with ruff, yamllint and shellcheck |
 

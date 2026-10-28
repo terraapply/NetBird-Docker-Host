@@ -20,6 +20,11 @@ READMES = (
     REPO_ROOT / "netbird-agent" / "README.md",
 )
 CONTRIBUTING = REPO_ROOT / "CONTRIBUTING.md"
+LLMS_INSTALL = REPO_ROOT / "llms-install.md"
+INSTALL_LINE = (
+    "Download https://raw.githubusercontent.com/terraapply/NetBird-Docker-Host"
+    "/main/llms-install.md with curl and follow it."
+)
 
 DEPLOY_SKILLS = (
     "netbird-install-server",
@@ -400,3 +405,25 @@ def test_release_guru_keeps_the_branch_name():
     text = skill_text("release-guru")
     assert "keep the branch name" in text
     assert "and branch name to match" not in text
+
+
+def test_llms_install_hands_over_to_agents_md_and_install_skills():
+    text = LLMS_INSTALL.read_text()
+    for needle in (
+        "git clone https://github.com/terraapply/NetBird-Docker-Host.git",
+        "AGENTS.md#where-am-i",
+        "AGENTS.md#confirm-or-refuse",
+        "(.agents/skills/netbird-install-server/SKILL.md)",
+        "(.agents/skills/netbird-install-agent/SKILL.md)",
+    ):
+        assert needle in text
+    # Upgrades run `git pull`, which fails on a clone left at a tag.
+    assert "git checkout" not in text
+    assert not SETUP_KEY_ON_CLI.search(text)
+
+
+def test_readme_gives_install_line_for_each_harness():
+    agent = section((REPO_ROOT / "README.md").read_text(), "Using an AI agent")
+    assert f"\n{INSTALL_LINE}\n" in agent
+    for launch in ("claude", "codex", "pi", "opencode --prompt"):
+        assert f'\n{launch} "{INSTALL_LINE}"\n' in agent
