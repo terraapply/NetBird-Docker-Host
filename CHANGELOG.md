@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `llms-install.md`: paste one line into Claude Code, Codex, Pi or OpenCode and the agent clones this repository, asks whether you want the server or an agent VM, and follows the matching install skill. The line and a launch command for each agent are under "Using an AI agent" in the README.
+
 ## [0.2.0] - 2026-10-27
 
 ### Added

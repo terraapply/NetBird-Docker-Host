@@ -13,6 +13,7 @@ A self-hosted [NetBird](https://netbird.io) network for Linux VMs: one VM runs t
 | `netbird-agent/` | The peer client, installed with Docker (`netbird-agent/docker/`) or natively. [Its README](netbird-agent/README.md) covers upgrade, uninstall and troubleshooting. |
 | `tests/`, `netbird-*/tests/` | pytest suites. No network; Docker tests skip when Docker is missing. |
 | `scripts/` | `check_versions.py`: every pinned version and the newest release of each. Read-only; needs network. |
+| `llms-install.md` | The entry point for an agent started outside a clone: it clones the repo and hands over to the install skills. |
 | `.agents/skills/` | Task skills, also reachable through `.claude/skills/`. |
 
 Overview: [README.md](README.md). Contribution rules: [CONTRIBUTING.md](CONTRIBUTING.md).
